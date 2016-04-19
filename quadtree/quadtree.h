@@ -11,7 +11,6 @@ const double maxLength = 4194304.0;
 
 class terrainPoint {
 public:
-	double pizza;
 	double3 tempNormal;
 	double height;
 	float height_f;
