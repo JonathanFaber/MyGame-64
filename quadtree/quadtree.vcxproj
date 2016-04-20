@@ -157,7 +157,7 @@
   <ItemGroup>
     <ClInclude Include="camera.h" />
     <ClInclude Include="includes.h" />
-    <ClInclude Include="quadtree.h" />
+    <ClInclude Include="planet.h" />
     <ClInclude Include="shaders.h" />
     <ClInclude Include="simplexnoise.h" />
     <ClInclude Include="sky.h" />

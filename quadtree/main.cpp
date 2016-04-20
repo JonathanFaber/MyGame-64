@@ -1,7 +1,7 @@
 #include "includes.h"
 #include "shaders.h"
 #include "camera.h"
-#include "quadtree.h"
+#include "planet.h"
 #include "sky.h"
 #include "timer.h"
 #include "sprites.h"

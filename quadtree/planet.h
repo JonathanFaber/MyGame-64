@@ -1,1275 +1,1875 @@
 #include "includes.h"
+#include "shaders.h"
+#include "simplexnoise.h"
+
 
 #ifndef __PLANET_H_INCLUDED__
-#define __PLANET_H_INCLUDED__
+#define __PLANET_H_INCLUDED__ 
 
-double3 cubePos;
-double planetRadius = 5340353.71544;
+const int chunkLength = 32;
+const double maxLength = 4194304.0;
 
-
-
-class planet {
-private:
-	static const int LandChunkSize = 256;
-
-	ID3D11Buffer* indexBuffer[6];
-	ID3D11Buffer* vertBuffer[6];
-
-	XMMATRIX groundWorld;
-
-	PlanetVertex vertices[6][(LandChunkSize + 1)*(LandChunkSize + 1)];
-	DWORD indices[6][LandChunkSize*LandChunkSize * 6];
-
-	float landPoints[LandChunkSize + 1][LandChunkSize + 1];
-	float landPoints_x[2][LandChunkSize + 1][LandChunkSize + 1];
-	float landPoints_y[LandChunkSize + 1][2][LandChunkSize + 1];
-	float landPoints_z[LandChunkSize + 1][LandChunkSize + 1][2];
-
-	float landPoints_med[1][1][LandChunkSize + 1][LandChunkSize + 1];
-	//
-	float heatPoints[LandChunkSize + 1][LandChunkSize + 1];
-	float heatPoints_x[2][LandChunkSize + 1][LandChunkSize + 1];
-	float heatPoints_y[LandChunkSize + 1][2][LandChunkSize + 1];
-	float heatPoints_z[LandChunkSize + 1][LandChunkSize + 1][2];
-	//
-	float moisturePoints[LandChunkSize + 1][LandChunkSize + 1];
-	float moisturePoints_x[2][LandChunkSize + 1][LandChunkSize + 1];
-	float moisturePoints_y[LandChunkSize + 1][2][LandChunkSize + 1];
-	float moisturePoints_z[LandChunkSize + 1][LandChunkSize + 1][2];
-
-	bool landDone[LandChunkSize + 1][LandChunkSize + 1];
-	int landLength;
-	float amplitude;
-	float randomH;
-
-	int seed;
-	int randSeed_large[18];
-
-	bool drawFace[8];
-	int closestFace;
-
-	UINT omitIndices[6][25]; // second [] is how many squares
-	UINT omitIndicesOrdered[6][25];
-	int numSquaresToOmit[6];
-
-	double3 planetPos;
-	double3 camToPlanet;
-	double3 normalizedCamToPlanet;
-
-	// medium
-	ID3D11Buffer* terrainIndexBuffer_highQ;
-	ID3D11Buffer* terrainVertBuffer_highQ[7][7];
-	vec2 terrain_mediumQ_Pos[44];
-	XMMATRIX groundWorld_highQ;
-
-	static const int BigChunkSize = 256;
-
-	float points[5][5][BigChunkSize + 1][BigChunkSize + 1];
-	float smoothPoints[5][5][BigChunkSize + 1][BigChunkSize + 1];
-	float allPoints[BigChunkSize * 5 + 1][BigChunkSize * 5 + 1];
-	float smoothPointsAvg[5][5];
-
-	static const int random = 5;
-
-	bool done[BigChunkSize + 1][BigChunkSize + 1];
-	int length = BigChunkSize;
-
-	bool BigChunkDone[5][5];
-
-	vec2 regionPos;
-	vec2 region;
-	vec2 smallRegionPos;
-	vec2 smallRegion;
-	vec2 bigRegionPos;
-	vec2 bigRegion;
-
-	bool change = false;
-	bool smallChange = false;
-	int randSeed_medium[10001][10001];
-
-	Vertex terrainVertices_highQ[7][7][33 * 33];
-	DWORD terrainIndices_highQ[6 * 32 * 32];
-
-	XMFLOAT3 f_normals[2][BigChunkSize * 5][BigChunkSize * 5];
-	XMFLOAT3 V;
-	XMFLOAT3 W;
-	XMFLOAT3 normals[BigChunkSize * 5 + 1][BigChunkSize * 5 + 1];
-
-	D3D11_BUFFER_DESC terrainIndexBufferDesc_highQ;
-	D3D11_SUBRESOURCE_DATA terrainIndexBufferData_highQ;
-	D3D11_BUFFER_DESC terrainVertexBufferDesc_highQ;
-	D3D11_SUBRESOURCE_DATA terrainVertexBufferData_highQ[7][7];
-
+class terrainPoint {
 public:
-	XMFLOAT3 planetPoints_x[2][LandChunkSize + 1][LandChunkSize + 1];
-	XMFLOAT3 planetPoints_y[LandChunkSize + 1][2][LandChunkSize + 1];
-	XMFLOAT3 planetPoints_z[LandChunkSize + 1][LandChunkSize + 1][2];
+	double3 tempNormal;
+	double height;
+	float height_f;
+	double height1;
+	double landTypeHeight;
+	float landTypeHeight_f;
+	double amplitude;
+	double maxAmplitude;
+	double maxAmplitude1;
+	double noiseInput[3];
+	double freq;
+	double lacunarity;
+	double persistence;
+	double3 terrain;
 
-	//points have to be between -1 and 1
-	//not 0 and 1
+	// change because it sucks
+	void generateTerrainPoint(double3 pos) {
+		tempNormal = pos;
 
-	void createLand() {
-		landLength = LandChunkSize;
+		pos.x *= maxLength;
+		pos.y *= maxLength;
+		pos.z *= maxLength;
 
-		seed = 1;
+		height = 0.0;
+		height_f = 0.0f;
+		height1 = 0.0;
+		landTypeHeight = 0.0;
+		landTypeHeight_f = 0.0f;
+		amplitude;
+		maxAmplitude = 0.0;
+		maxAmplitude1 = 0.0;
+		noiseInput[3];
+		freq;
+		lacunarity = 2.0;
+		persistence = 0.5;
 
-		counter = 0;
-		srand(seed);
-
-		for (int i = 0; i < 18; i++) {
-			randSeed_large[i] = rand() % 32000;
-		}
-		//randSeed_large [500][500] = 1;////Change eventually////
-
-		for (int m = 0; m < 2; m++) {
-			for (int z = 0; z < LandChunkSize + 1; z++) {
-				for (int x = 0; x < LandChunkSize + 1; x++) {
-					landPoints_x[m][x][z] = 0.0f;
-					landPoints_y[x][m][z] = 0.0f;
-					landPoints_z[x][z][m] = 0.0f;
-					heatPoints_x[m][x][z] = 0.0f;
-					heatPoints_y[x][m][z] = 0.0f;
-					heatPoints_z[x][z][m] = 0.0f;
-					moisturePoints_x[m][x][z] = 0.0f;
-					moisturePoints_y[x][m][z] = 0.0f;
-					moisturePoints_z[x][z][m] = 0.0f;
-				}
-			}
-		}
-
-		counter = 0;
-		for (int m = 0; m < 6; m++) {
-			for (int z = 0; z < LandChunkSize + 1; z++) {
-				for (int x = 0; x < LandChunkSize + 1; x++) {
-					landPoints[x][z] = 0.0f;
-					landDone[x][z] = false;
-				}
-			}
-
-			amplitude = 1.0f;
-			srand(randSeed_large[m]);
-
-			if (m == 2) { //x side 0
-				for (int i = 0; i < LandChunkSize + 1; i++) {
-					landPoints[i][0] = landPoints_y[0][0][i];
-					landDone[i][0] = true;
-
-					landPoints[i][LandChunkSize] = landPoints_y[0][1][i];
-					landDone[i][LandChunkSize] = true;
-				}
-			}
-			if (m == 3) { //x side 1
-				for (int i = 0; i < LandChunkSize + 1; i++) {
-					landPoints[i][0] = landPoints_y[LandChunkSize][0][i];
-					landDone[i][0] = true;
-
-					landPoints[i][LandChunkSize] = landPoints_y[LandChunkSize][1][i];
-					landDone[i][LandChunkSize] = true;
-				}
-			}
-			if (m == 4) { //z side 0
-				for (int i = 0; i < LandChunkSize + 1; i++) {
-					landPoints[i][0] = landPoints_y[i][0][0];
-					landDone[i][0] = true;
-
-					landPoints[i][LandChunkSize] = landPoints_y[i][1][0];
-					landDone[i][LandChunkSize] = true;
-
-					landPoints[0][i] = landPoints_x[0][i][0];
-					landDone[0][i] = true;
-
-					landPoints[LandChunkSize][i] = landPoints_x[1][i][0];
-					landDone[LandChunkSize][i] = true;
-				}
-			}
-			if (m == 5) { //z side 1
-				for (int i = 0; i < LandChunkSize + 1; i++) {
-					landPoints[i][0] = landPoints_y[i][0][LandChunkSize];
-					landDone[i][0] = true;
-
-					landPoints[i][LandChunkSize] = landPoints_y[i][1][LandChunkSize];
-					landDone[i][LandChunkSize] = true;
-
-					landPoints[0][i] = landPoints_x[0][i][LandChunkSize];
-					landDone[0][i] = true;
-
-					landPoints[LandChunkSize][i] = landPoints_x[1][i][LandChunkSize];
-					landDone[LandChunkSize][i] = true;
-				}
-			}
-
-			for (int i = 0; i < 8; i++) {
-				for (int x = 0; x < LandChunkSize / landLength; x++) {
-					for (int z = 0; z < LandChunkSize / landLength; z++) {
-						//Middle
-						if (landDone[landLength / 2 + x*landLength][landLength / 2 + z*landLength] == false) {
-							randomH = (rand() % 1000) - 500;
-							landPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] = (landPoints[x*landLength][z*landLength] + landPoints[x*landLength][(z + 1)*landLength] + landPoints[(x + 1)*landLength][(z + 1)*landLength] + landPoints[(x + 1)*landLength][z*landLength]) / 4 + (randomH / 500.0f)*amplitude;
-						}
-					}
-				}
-
-				for (int x = 0; x < LandChunkSize / landLength; x++) {
-					for (int z = 0; z < LandChunkSize / landLength; z++) {
-						if (landDone[x*landLength][landLength / 2 + z*landLength] == false) {	//west
-							randomH = (rand() % int(1000)) - 500;
-							if (x != 0) {
-								landPoints[x*landLength][landLength / 2 + z*landLength] = (landPoints[x*landLength - landLength / 2][landLength / 2 + z*landLength] + landPoints[x*landLength][landLength + z*landLength] + landPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + landPoints[x*landLength][z*landLength]) / 4 + (randomH / 500.0f)*amplitude;
-							}
-							else {
-								//landPoints[x*landLength][landLength/2+z*landLength] = (landPoints[x*landLength][landLength+z*landLength] + landPoints[landLength/2+x*landLength][landLength/2+z*landLength] + landPoints[x*landLength][z*landLength])/3 + (randomH/500.0f)*amplitude;
-								landPoints[x*landLength][landLength / 2 + z*landLength] = (landPoints[x*landLength][landLength + z*landLength] + landPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + landPoints[x*landLength][z*landLength]) / 3 + (randomH / 500.0f)*amplitude;
-							}
-							landDone[x*landLength][landLength / 2 + z*landLength] = true;
-						}
-						if (landDone[landLength / 2 + x*landLength][landLength + z*landLength] == false) {	//north
-							randomH = (rand() % int(1000)) - 500;
-							if (z != LandChunkSize / landLength - 1) {
-								landPoints[landLength / 2 + x*landLength][landLength + z*landLength] = (landPoints[x*landLength][landLength + z*landLength] + landPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength + landLength] + landPoints[landLength + x*landLength][landLength + z*landLength] + landPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength]) / 4 + (randomH / 500.0f)*amplitude;
-							}
-							else {
-								//landPoints[landLength/2+x*landLength][landLength+z*landLength] = (landPoints[x*landLength][landLength+z*landLength] + landPoints[landLength+x*landLength][landLength+z*landLength] + landPoints[landLength/2+x*landLength][landLength/2+z*landLength])/3 + (randomH/500.0f)*amplitude;
-								landPoints[landLength / 2 + x*landLength][landLength + z*landLength] = (landPoints[x*landLength][landLength + z*landLength] + landPoints[landLength + x*landLength][landLength + z*landLength] + landPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength]) / 3 + (randomH / 500.0f)*amplitude;
-							}
-							landDone[landLength / 2 + x*landLength][landLength + z*landLength] = true;
-						}
-						if (landDone[landLength + x*landLength][landLength / 2 + z*landLength] == false) {	//east
-							randomH = (rand() % int(1000)) - 500;
-							if (x != LandChunkSize / landLength - 1) {
-								landPoints[landLength + x*landLength][landLength / 2 + z*landLength] = (landPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + landPoints[landLength + x*landLength][landLength + z*landLength] + landPoints[landLength + x*landLength + landLength / 2][landLength / 2 + z*landLength] + landPoints[landLength + x*landLength][z*landLength]) / 4 + (randomH / 500.0f)*amplitude;
-							}
-							else {
-								//landPoints[landLength+x*landLength][landLength/2+z*landLength] = (landPoints[landLength/2+x*landLength][landLength/2+z*landLength] + landPoints[landLength+x*landLength][landLength+z*landLength] + landPoints[landLength+x*landLength][z*landLength])/3 + (randomH/500.0f)*amplitude;
-								landPoints[landLength + x*landLength][landLength / 2 + z*landLength] = (landPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + landPoints[landLength + x*landLength][landLength + z*landLength] + landPoints[landLength + x*landLength][z*landLength]) / 3 + (randomH / 500.0f)*amplitude;
-							}
-							landDone[landLength + x*landLength][landLength / 2 + z*landLength] = true;
-						}
-						if (landDone[landLength / 2 + x*landLength][z*landLength] == false) {	//south
-							randomH = (rand() % int(1000)) - 500;
-							if (z != 0) {
-								landPoints[landLength / 2 + x*landLength][z*landLength] = (landPoints[x*landLength][z*landLength] + landPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + landPoints[landLength + x*landLength][z*landLength] + landPoints[landLength / 2 + x*landLength][z*landLength - landLength / 2]) / 4 + (randomH / 500.0f)*amplitude;
-							}
-							else {
-								//landPoints[landLength/2+x*landLength][z*landLength] = (landPoints[x*landLength][z*landLength] + landPoints[landLength/2+x*landLength][landLength/2+z*landLength] + landPoints[landLength+x*landLength][z*landLength])/3 + (randomH/500.0f)*amplitude;
-								landPoints[landLength / 2 + x*landLength][z*landLength] = (landPoints[x*landLength][z*landLength] + landPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + landPoints[landLength + x*landLength][z*landLength]) / 3 + (randomH / 500.0f)*amplitude;
-							}
-							landDone[landLength / 2 + x*landLength][z*landLength] = true;
-						}
-					}
-				}
-
-				amplitude *= 0.5f;
-				landLength *= 0.5;
-			}
-			///////////////////////////
-			landLength = LandChunkSize;
-			amplitude = 1.0f;
-
-			for (int z = 0; z < LandChunkSize + 1; z++) {
-				for (int x = 0; x < LandChunkSize + 1; x++) {
-					if (m == 0 || m == 1) {
-						landPoints_y[x][m][z] = landPoints[x][z];
-					}
-					if (m == 2 || m == 3) {
-						landPoints_x[m - 2][z][x] = landPoints[x][z];
-					}
-					if (m == 4 || m == 5) {
-						landPoints_z[x][z][m - 4] = landPoints[x][z];
-					}
-				}
-			}
-
+		amplitude = 1.0;
+		freq = 64.0;
+		for (int k = 0; k < 4; k++) {
+			//if (j == 12)
+			//	amplitude *= 8.0;
+			//if (j == 14)
+			//	amplitude /= 8.0;
+			noiseInput[0] = pos.x / maxLength * freq;
+			noiseInput[1] = pos.y / maxLength * freq;
+			noiseInput[2] = pos.z / maxLength * freq;
+			landTypeHeight += ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2]))) * amplitude;
+			//height += cos(noiseInput[0] + ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])))) * amplitude;
+			maxAmplitude += amplitude;
+			freq *= lacunarity;
+			amplitude *= persistence;
 		}
 
+		landTypeHeight_f = float(landTypeHeight);
 
+
+
+		if (landTypeHeight <= -0.5) {
+			maxAmplitude = 0.0;
+			amplitude = 5000.0;
+			freq = 1.0;
+			for (int k = 0; k < 18; k++) {
+				if (k == 9) {
+					//freq *= 4.0;
+					amplitude *= 64.0;
+				}
+				noiseInput[0] = pos.x / maxLength * freq;
+				noiseInput[1] = pos.y / maxLength * freq;
+				noiseInput[2] = pos.z / maxLength * freq;
+				height += ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2]))) * amplitude;
+				//height += cos(noiseInput[0] + ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])))) * amplitude;
+				maxAmplitude += amplitude;
+				freq *= lacunarity;
+				amplitude *= persistence;
+			}
+
+			height /= maxAmplitude;
+
+			height -= 0.15; // because planet is closer to 75 % water
+
+			height_f = float(height);
+		}
+		else if (landTypeHeight <= 0.75) {
+			maxAmplitude = 0.0;
+			amplitude = 5000.0;
+			freq = 1.0;
+			for (int k = 0; k < 22; k++) {
+				if (k == 14) {
+					//freq *= 4.0;
+					amplitude *= 16.0;
+				}
+				noiseInput[0] = pos.x / maxLength * freq;
+				noiseInput[1] = pos.y / maxLength * freq;
+				noiseInput[2] = pos.z / maxLength * freq;
+				height += ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2]))) * amplitude;
+				//height += cos(noiseInput[0] + ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])))) * amplitude;
+				maxAmplitude += amplitude;
+				freq *= lacunarity;
+				amplitude *= persistence;
+			}
+
+			height /= maxAmplitude;
+
+			height -= 0.15; // because planet is closer to 75 % water
+
+			height_f = float(height);
+		}
+		else {
+			maxAmplitude = 0.0;
+			amplitude = 5000.0;
+			freq = 64.0;
+			for (int k = 0; k < 22; k++) {
+				//if (k == 18)
+				//	amplitude *= 16.0;
+				noiseInput[0] = pos.x / maxLength * freq;
+				noiseInput[1] = pos.y / maxLength * freq;
+				noiseInput[2] = pos.z / maxLength * freq;
+				height += ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2]))) * amplitude;
+				//height += cos(noiseInput[0] + ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])))) * amplitude;
+				maxAmplitude += amplitude;
+				freq *= lacunarity;
+				amplitude *= persistence;
+			}
+
+			height /= maxAmplitude;
+
+			height -= 0.15; // because planet is closer to 75 % water
+
+			height_f = float(height);
+		}
+
+		if (height <= 0.0)
+			height = 0.0;
+
+		height *= maxAmplitude;
+		
+		terrain = double3(tempNormal.x * height, tempNormal.y * height, tempNormal.z * height);
+
+
+		/*
+		else if (height >= 0.4 && height <= 0.42) {
+		double tempHeight;
+		freq = 128.0;
+		lacunarity = 1.7;
+		amplitude = 3000.0;
+		for (int k = 0; k < 22; k++) {
+		//if (j == 5)
+		//	amplitude *= 0.25;
+		double noiseInput[3] = { pos.x / maxLength * freq, pos.y / maxLength * freq, pos.z / maxLength * freq };
+		if (k < 1)
+		tempHeight = (1.0 - abs(raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])));
+		else
+		tempHeight = (1.0 - abs(raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])));
+
+		//tempHeight *= tempHeight;
+		height1 += tempHeight * amplitude;
+		maxAmplitude1 += amplitude;
+		freq *= lacunarity;
+		amplitude *= persistence;
+		}
+		height1 += height * maxAmplitude;
+		height1 /= maxAmplitude1;
+		height = ((height - 0.4) * 50 * height1 * maxAmplitude1) + (1.0 - ((height - 0.4) * 50)) * height * maxAmplitude;
+		}
+		else if (height > 0.42) {
+		double tempHeight;
+		freq = 128.0;
+		lacunarity = 1.7;
+		amplitude = 3000.0;
+		for (int k = 0; k < 22; k++) {
+		//if (j == 5)
+		//	amplitude *= 0.25;
+		double noiseInput[3] = { pos.x / maxLength * freq, pos.y / maxLength * freq, pos.z / maxLength * freq };
+		if (k < 1) {
+		tempHeight = (1.0 - abs(raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])));
+		tempHeight *= tempHeight;
+		}
+		else
+		tempHeight = (1.0 - abs(raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])));
+
+		//tempHeight *= tempHeight;
+		height1 += tempHeight * amplitude;
+		maxAmplitude1 += amplitude;
+		freq *= lacunarity;
+		amplitude *= persistence;
+		}
+		height = height1 + height * maxAmplitude;
+		//verticesFinal[z * (chunkLength + 1) + x].height = float(height);
+		}
+		else {
+		height *= maxAmplitude;
+		}
+		*/
 	}
 
-	void createTemperature() {
-		landLength = LandChunkSize;
+}terrainPoint;
 
-		counter = 0;
-		for (int m = 0; m < 6; m++) {
-			for (int z = 0; z < LandChunkSize + 1; z++) {
-				for (int x = 0; x < LandChunkSize + 1; x++) {
-					heatPoints[x][z] = 0.0f;
-					landDone[x][z] = false;
-				}
+
+
+class Planet {
+
+	struct quad {
+		double3 pos;
+		double3 posSquare;
+		double3 posAway;
+		double distance;
+		double length;
+		bool subdivide;
+		bool combine;
+
+		quad() {}
+		quad(double3 pos1, double3 posSquare1, double length1) : pos(pos1), posSquare(posSquare1), length(length1) {}
+
+		void update() {
+			posAway = double3(pos.x - camPos.x, pos.y - camPos.y, pos.z - camPos.z);
+			distance = vLength(posAway);
+
+			if (distance < length*4.0 && length > maxLength / 262144.0) {
+				subdivide = true;
+				combine = false;
 			}
-
-			amplitude = 1.0f;
-			srand(randSeed_large[m + 6]);
-
-			if (m == 0) {
-				heatPoints[LandChunkSize / 2][LandChunkSize / 2] = -1.0f;
-				landDone[LandChunkSize / 2][LandChunkSize / 2] = true;
+			else if (distance > length*12.0 && length < maxLength) {
+				combine = true;
+				subdivide = false;
 			}
-			else if (m == 1) {
-				heatPoints[LandChunkSize / 2][LandChunkSize / 2] = -1.0f;
-				landDone[LandChunkSize / 2][LandChunkSize / 2] = true;
+			else {
+				subdivide = false;
+				combine = false;
 			}
-			else if (m == 2) { //x side 0
-				heatPoints[LandChunkSize / 2][LandChunkSize / 2] = 1.0f;
-				landDone[LandChunkSize / 2][LandChunkSize / 2] = true;
+		}
+	};
 
-				for (int i = 0; i < LandChunkSize + 1; i++) {
-					heatPoints[i][0] = heatPoints_y[0][0][i];
-					landDone[i][0] = true;
 
-					heatPoints[i][LandChunkSize] = heatPoints_y[0][1][i];
-					landDone[i][LandChunkSize] = true;
-				}
-			}
-			else if (m == 3) { //x side 1
-				heatPoints[LandChunkSize / 2][LandChunkSize / 2] = 1.0f;
-				landDone[LandChunkSize / 2][LandChunkSize / 2] = true;
+	class sideY {
+		quad quadData[2048];
+		bool drawQuad[2048];
+		bool firstUpdate[2048];
+		int numInstances;
 
-				for (int i = 0; i < LandChunkSize + 1; i++) {
-					heatPoints[i][0] = heatPoints_y[LandChunkSize][0][i];
-					landDone[i][0] = true;
+	public:
+		double squarePosY;
 
-					heatPoints[i][LandChunkSize] = heatPoints_y[LandChunkSize][1][i];
-					landDone[i][LandChunkSize] = true;
-				}
-			}
-			else if (m == 4) { //z side 0
-				heatPoints[LandChunkSize / 2][LandChunkSize / 2] = 1.0f;
-				landDone[LandChunkSize / 2][LandChunkSize / 2] = true;
 
-				for (int i = 0; i < LandChunkSize + 1; i++) {
-					heatPoints[i][0] = heatPoints_y[i][0][0];
-					landDone[i][0] = true;
+		void updateQuad() {
 
-					heatPoints[i][LandChunkSize] = heatPoints_y[i][1][0];
-					landDone[i][LandChunkSize] = true;
+			for (int i = 0; i < 2048; i++) {
 
-					heatPoints[0][i] = heatPoints_x[0][i][0];
-					landDone[0][i] = true;
+				if (drawQuad[i] == true) {
 
-					heatPoints[LandChunkSize][i] = heatPoints_x[1][i][0];
-					landDone[LandChunkSize][i] = true;
-				}
-			}
-			else if (m == 5) { //z side 1
-				heatPoints[LandChunkSize / 2][LandChunkSize / 2] = 1.0f;
-				landDone[LandChunkSize / 2][LandChunkSize / 2] = true;
+					if (quadData[i].subdivide == true) {
 
-				for (int i = 0; i < LandChunkSize + 1; i++) {
-					heatPoints[i][0] = heatPoints_y[i][0][LandChunkSize];
-					landDone[i][0] = true;
+						drawQuad[i] = false;
+						quad temp = quadData[i];
+						counter = 0;
 
-					heatPoints[i][LandChunkSize] = heatPoints_y[i][1][LandChunkSize];
-					landDone[i][LandChunkSize] = true;
+						for (int j = 0; j < 2048; j++) {
+							if (counter == 0) {
+								if (drawQuad[j] == false) {
+									quadData[j].posSquare = double3(temp.posSquare.x - 0.5*temp.length, squarePosY, temp.posSquare.z - 0.5*temp.length);
+									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
 
-					heatPoints[0][i] = heatPoints_x[0][i][LandChunkSize];
-					landDone[0][i] = true;
+									// Next apply height
+									double3 tempNormal = quadData[j].pos;
 
-					heatPoints[LandChunkSize][i] = heatPoints_x[1][i][LandChunkSize];
-					landDone[LandChunkSize][i] = true;
-				}
-			}
+									quadData[j].pos.x *= maxLength;
+									quadData[j].pos.y *= maxLength;
+									quadData[j].pos.z *= maxLength;
+									quadData[j].length = temp.length / 2.0;
+									
+									terrainPoint.generateTerrainPoint(tempNormal);
 
-			for (int i = 0; i < 8; i++) {
-				for (int x = 0; x < LandChunkSize / landLength; x++) {
-					for (int z = 0; z < LandChunkSize / landLength; z++) {
-						//Middle
-						if (landDone[landLength / 2 + x*landLength][landLength / 2 + z*landLength] == false) {
-							randomH = (rand() % 1000) - 500;
-							heatPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] = (heatPoints[x*landLength][z*landLength] + heatPoints[x*landLength][(z + 1)*landLength] + heatPoints[(x + 1)*landLength][(z + 1)*landLength] + heatPoints[(x + 1)*landLength][z*landLength]) / 4 + (randomH / 500.0f)*amplitude;
+									
+
+									quadData[j].pos.x += terrainPoint.terrain.x;
+									quadData[j].pos.y += terrainPoint.terrain.y;
+									quadData[j].pos.z += terrainPoint.terrain.z;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+									counter++;
+								}
+							}
+							else if (counter == 1) {
+								if (drawQuad[j] == false) {
+									quadData[j].posSquare = double3(temp.posSquare.x + 0.5*temp.length, squarePosY, temp.posSquare.z - 0.5*temp.length);
+									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
+
+									// Next apply height
+									double3 tempNormal = quadData[j].pos;
+
+									quadData[j].pos.x *= maxLength;
+									quadData[j].pos.y *= maxLength;
+									quadData[j].pos.z *= maxLength;
+									quadData[j].length = temp.length / 2.0;
+
+									terrainPoint.generateTerrainPoint(tempNormal);
+
+
+									quadData[j].pos.x += terrainPoint.terrain.x;
+									quadData[j].pos.y += terrainPoint.terrain.y;
+									quadData[j].pos.z += terrainPoint.terrain.z;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+									counter++;
+								}
+							}
+							else if (counter == 2) {
+								if (drawQuad[j] == false) {
+									quadData[j].posSquare = double3(temp.posSquare.x + 0.5*temp.length, squarePosY, temp.posSquare.z + 0.5*temp.length);
+									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
+
+									// Next apply height
+									double3 tempNormal = quadData[j].pos;
+
+									quadData[j].pos.x *= maxLength;
+									quadData[j].pos.y *= maxLength;
+									quadData[j].pos.z *= maxLength;
+									quadData[j].length = temp.length / 2.0;
+
+									terrainPoint.generateTerrainPoint(tempNormal);
+
+
+
+									quadData[j].pos.x += terrainPoint.terrain.x;
+									quadData[j].pos.y += terrainPoint.terrain.y;
+									quadData[j].pos.z += terrainPoint.terrain.z;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+									counter++;
+								}
+							}
+							else if (counter == 3) {
+								if (drawQuad[j] == false) {
+									quadData[j].posSquare = double3(temp.posSquare.x - 0.5*temp.length, squarePosY, temp.posSquare.z + 0.5*temp.length);
+									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
+
+									// Next apply height
+									double3 tempNormal = quadData[j].pos;
+
+									quadData[j].pos.x *= maxLength;
+									quadData[j].pos.y *= maxLength;
+									quadData[j].pos.z *= maxLength;
+									quadData[j].length = temp.length / 2.0;
+
+									terrainPoint.generateTerrainPoint(tempNormal);
+
+
+
+									quadData[j].pos.x += terrainPoint.terrain.x;
+									quadData[j].pos.y += terrainPoint.terrain.y;
+									quadData[j].pos.z += terrainPoint.terrain.z;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+									counter++;
+								}
+							}
 						}
-					}
-				}
 
-				for (int x = 0; x < LandChunkSize / landLength; x++) {
-					for (int z = 0; z < LandChunkSize / landLength; z++) {
-						if (landDone[x*landLength][landLength / 2 + z*landLength] == false) {	//west
-							randomH = (rand() % int(1000)) - 500;
-							if (x != 0) {
-								heatPoints[x*landLength][landLength / 2 + z*landLength] = (heatPoints[x*landLength - landLength / 2][landLength / 2 + z*landLength] + heatPoints[x*landLength][landLength + z*landLength] + heatPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + heatPoints[x*landLength][z*landLength]) / 4 + (randomH / 500.0f)*amplitude;
+					}
+					if (quadData[i].combine == true) {
+
+						if (((quadData[i].posSquare.x - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0 == floor(((quadData[i].posSquare.x - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0)
+							&& ((quadData[i].posSquare.z - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0 == floor(((quadData[i].posSquare.z - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0)) {
+
+							drawQuad[i] = false;
+
+							for (int j = 0; j < 2048; j++) {
+								if (drawQuad[j] == true && quadData[j].length == quadData[i].length) {
+
+									if (quadData[i].posSquare.x + quadData[i].length * 2.0 == quadData[j].posSquare.x && quadData[i].posSquare.z == quadData[j].posSquare.z) {
+										quadData[j].combine = false;
+										drawQuad[j] = false;
+									}
+									else if (quadData[i].posSquare.x + quadData[i].length * 2.0 == quadData[j].posSquare.x && quadData[i].posSquare.z + quadData[i].length * 2.0 == quadData[j].posSquare.z) {
+										quadData[j].combine = false;
+										drawQuad[j] = false;
+									}
+									else if (quadData[i].posSquare.x == quadData[j].posSquare.x && quadData[i].posSquare.z + quadData[i].length * 2.0 == quadData[j].posSquare.z) {
+										quadData[j].combine = false;
+										drawQuad[j] = false;
+									}
+
+								}
 							}
-							else {
-								//heatPoints[x*landLength][landLength/2+z*landLength] = (heatPoints[x*landLength][landLength+z*landLength] + heatPoints[landLength/2+x*landLength][landLength/2+z*landLength] + heatPoints[x*landLength][z*landLength])/3 + (randomH/500.0f)*amplitude;
-								heatPoints[x*landLength][landLength / 2 + z*landLength] = (heatPoints[x*landLength][landLength + z*landLength] + heatPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + heatPoints[x*landLength][z*landLength]) / 3 + (randomH / 500.0f)*amplitude;
-							}
-							landDone[x*landLength][landLength / 2 + z*landLength] = true;
+
+							quadData[i].posSquare.x += quadData[i].length;
+							quadData[i].posSquare.z += quadData[i].length;
+							quadData[i].pos = spherize(double3(quadData[i].posSquare.x / maxLength, quadData[i].posSquare.y / maxLength, quadData[i].posSquare.z / maxLength));
+
+							// Next apply height
+							// Next apply height
+							double3 tempNormal = quadData[i].pos;
+
+							quadData[i].pos.x *= maxLength;
+							quadData[i].pos.y *= maxLength;
+							quadData[i].pos.z *= maxLength;
+
+							terrainPoint.generateTerrainPoint(tempNormal);
+
+
+
+							quadData[i].pos.x += terrainPoint.terrain.x;
+							quadData[i].pos.y += terrainPoint.terrain.y;
+							quadData[i].pos.z += terrainPoint.terrain.z;
+
+							quadData[i].length *= 2.0;
+
+							quadData[i].combine = false;
+							drawQuad[i] = true;
+							firstUpdate[i] = true;
 						}
-						if (landDone[landLength / 2 + x*landLength][landLength + z*landLength] == false) {	//north
-							randomH = (rand() % int(1000)) - 500;
-							if (z != LandChunkSize / landLength - 1) {
-								heatPoints[landLength / 2 + x*landLength][landLength + z*landLength] = (heatPoints[x*landLength][landLength + z*landLength] + heatPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength + landLength] + heatPoints[landLength + x*landLength][landLength + z*landLength] + heatPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength]) / 4 + (randomH / 500.0f)*amplitude;
-							}
-							else {
-								//heatPoints[landLength/2+x*landLength][landLength+z*landLength] = (heatPoints[x*landLength][landLength+z*landLength] + heatPoints[landLength+x*landLength][landLength+z*landLength] + heatPoints[landLength/2+x*landLength][landLength/2+z*landLength])/3 + (randomH/500.0f)*amplitude;
-								heatPoints[landLength / 2 + x*landLength][landLength + z*landLength] = (heatPoints[x*landLength][landLength + z*landLength] + heatPoints[landLength + x*landLength][landLength + z*landLength] + heatPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength]) / 3 + (randomH / 500.0f)*amplitude;
-							}
-							landDone[landLength / 2 + x*landLength][landLength + z*landLength] = true;
-						}
-						if (landDone[landLength + x*landLength][landLength / 2 + z*landLength] == false) {	//east
-							randomH = (rand() % int(1000)) - 500;
-							if (x != LandChunkSize / landLength - 1) {
-								heatPoints[landLength + x*landLength][landLength / 2 + z*landLength] = (heatPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + heatPoints[landLength + x*landLength][landLength + z*landLength] + heatPoints[landLength + x*landLength + landLength / 2][landLength / 2 + z*landLength] + heatPoints[landLength + x*landLength][z*landLength]) / 4 + (randomH / 500.0f)*amplitude;
-							}
-							else {
-								//heatPoints[landLength+x*landLength][landLength/2+z*landLength] = (heatPoints[landLength/2+x*landLength][landLength/2+z*landLength] + heatPoints[landLength+x*landLength][landLength+z*landLength] + heatPoints[landLength+x*landLength][z*landLength])/3 + (randomH/500.0f)*amplitude;
-								heatPoints[landLength + x*landLength][landLength / 2 + z*landLength] = (heatPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + heatPoints[landLength + x*landLength][landLength + z*landLength] + heatPoints[landLength + x*landLength][z*landLength]) / 3 + (randomH / 500.0f)*amplitude;
-							}
-							landDone[landLength + x*landLength][landLength / 2 + z*landLength] = true;
-						}
-						if (landDone[landLength / 2 + x*landLength][z*landLength] == false) {	//south
-							randomH = (rand() % int(1000)) - 500;
-							if (z != 0) {
-								heatPoints[landLength / 2 + x*landLength][z*landLength] = (heatPoints[x*landLength][z*landLength] + heatPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + heatPoints[landLength + x*landLength][z*landLength] + heatPoints[landLength / 2 + x*landLength][z*landLength - landLength / 2]) / 4 + (randomH / 500.0f)*amplitude;
-							}
-							else {
-								heatPoints[landLength / 2 + x*landLength][z*landLength] = (heatPoints[x*landLength][z*landLength] + heatPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + heatPoints[landLength + x*landLength][z*landLength]) / 3 + (randomH / 500.0f)*amplitude;
-								heatPoints[landLength / 2 + x*landLength][z*landLength] = (heatPoints[x*landLength][z*landLength] + heatPoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + heatPoints[landLength + x*landLength][z*landLength]) / 3 + (randomH / 500.0f)*amplitude;
-							}
-							landDone[landLength / 2 + x*landLength][z*landLength] = true;
-						}
+
 					}
+
 				}
 
-				amplitude *= 0.5f;
-				landLength *= 0.5;
-			}
-			///////////////////////////
-			landLength = LandChunkSize;
-			amplitude = 1.0f;
-
-
-			for (int z = 0; z < LandChunkSize + 1; z++) {
-				for (int x = 0; x < LandChunkSize + 1; x++) {
-					if (m == 0 || m == 1) {
-						heatPoints_y[x][m][z] = heatPoints[x][z];
-					}
-					if (m == 2 || m == 3) {
-						heatPoints_x[m - 2][z][x] = heatPoints[x][z];
-					}
-					if (m == 4 || m == 5) {
-						heatPoints_z[x][z][m - 4] = heatPoints[x][z];
-					}
-				}
 			}
 
 		}
 
+		class chunk {
+			ID3D11Buffer* indexBuffer;
+			ID3D11Buffer* vertBuffer;
+			XMMATRIX groundWorld;
 
-	}
+			PlanetVertex verticesInitial[(chunkLength + 1)*(chunkLength + 1)];
+			PlanetVertex verticesFinal[(chunkLength + 1)*(chunkLength + 1)];
+			DWORD indices[chunkLength*chunkLength * 6];
 
-	void createMoisture() {
-		landLength = LandChunkSize;
-
-		counter = 0;
-		for (int m = 0; m < 6; m++) {
-			for (int z = 0; z < LandChunkSize + 1; z++) {
-				for (int x = 0; x < LandChunkSize + 1; x++) {
-					moisturePoints[x][z] = 0.0f;
-					landDone[x][z] = false;
-				}
-			}
-
-			amplitude = 1.0f;
-			srand(randSeed_large[m + 12]);
-
-			if (m == 2) { //x side 0
-				for (int i = 0; i < LandChunkSize + 1; i++) {
-					moisturePoints[i][0] = moisturePoints_y[0][0][i];
-					landDone[i][0] = true;
-
-					moisturePoints[i][LandChunkSize] = moisturePoints_y[0][1][i];
-					landDone[i][LandChunkSize] = true;
-				}
-			}
-			else if (m == 3) { //x side 1
-				for (int i = 0; i < LandChunkSize + 1; i++) {
-					moisturePoints[i][0] = moisturePoints_y[LandChunkSize][0][i];
-					landDone[i][0] = true;
-
-					moisturePoints[i][LandChunkSize] = moisturePoints_y[LandChunkSize][1][i];
-					landDone[i][LandChunkSize] = true;
-				}
-			}
-			else if (m == 4) { //z side 0
-				for (int i = 0; i < LandChunkSize + 1; i++) {
-					moisturePoints[i][0] = moisturePoints_y[i][0][0];
-					landDone[i][0] = true;
-
-					moisturePoints[i][LandChunkSize] = moisturePoints_y[i][1][0];
-					landDone[i][LandChunkSize] = true;
-
-					moisturePoints[0][i] = moisturePoints_x[0][i][0];
-					landDone[0][i] = true;
-
-					moisturePoints[LandChunkSize][i] = moisturePoints_x[1][i][0];
-					landDone[LandChunkSize][i] = true;
-				}
-			}
-			else if (m == 5) { //z side 1
-				for (int i = 0; i < LandChunkSize + 1; i++) {
-					moisturePoints[i][0] = moisturePoints_y[i][0][LandChunkSize];
-					landDone[i][0] = true;
-
-					moisturePoints[i][LandChunkSize] = moisturePoints_y[i][1][LandChunkSize];
-					landDone[i][LandChunkSize] = true;
-
-					moisturePoints[0][i] = moisturePoints_x[0][i][LandChunkSize];
-					landDone[0][i] = true;
-
-					moisturePoints[LandChunkSize][i] = moisturePoints_x[1][i][LandChunkSize];
-					landDone[LandChunkSize][i] = true;
-				}
-			}
-
-			for (int i = 0; i < 8; i++) {
-				for (int x = 0; x < LandChunkSize / landLength; x++) {
-					for (int z = 0; z < LandChunkSize / landLength; z++) {
-						//Middle
-						if (landDone[landLength / 2 + x*landLength][landLength / 2 + z*landLength] == false) {
-							randomH = (rand() % 1000) - 500;
-							moisturePoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] = (moisturePoints[x*landLength][z*landLength] + moisturePoints[x*landLength][(z + 1)*landLength] + moisturePoints[(x + 1)*landLength][(z + 1)*landLength] + moisturePoints[(x + 1)*landLength][z*landLength]) / 4 + (randomH / 500.0f)*amplitude;
-						}
-					}
-				}
-
-				for (int x = 0; x < LandChunkSize / landLength; x++) {
-					for (int z = 0; z < LandChunkSize / landLength; z++) {
-						if (landDone[x*landLength][landLength / 2 + z*landLength] == false) {	//west
-							randomH = (rand() % int(1000)) - 500;
-							if (x != 0) {
-								moisturePoints[x*landLength][landLength / 2 + z*landLength] = (moisturePoints[x*landLength - landLength / 2][landLength / 2 + z*landLength] + moisturePoints[x*landLength][landLength + z*landLength] + moisturePoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + moisturePoints[x*landLength][z*landLength]) / 4 + (randomH / 500.0f)*amplitude;
-							}
-							else {
-								//moisturePoints[x*landLength][landLength/2+z*landLength] = (moisturePoints[x*landLength][landLength+z*landLength] + moisturePoints[landLength/2+x*landLength][landLength/2+z*landLength] + moisturePoints[x*landLength][z*landLength])/3 + (randomH/500.0f)*amplitude;
-								moisturePoints[x*landLength][landLength / 2 + z*landLength] = (moisturePoints[x*landLength][landLength + z*landLength] + moisturePoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + moisturePoints[x*landLength][z*landLength]) / 3 + (randomH / 500.0f)*amplitude;
-							}
-							landDone[x*landLength][landLength / 2 + z*landLength] = true;
-						}
-						if (landDone[landLength / 2 + x*landLength][landLength + z*landLength] == false) {	//north
-							randomH = (rand() % int(1000)) - 500;
-							if (z != LandChunkSize / landLength - 1) {
-								moisturePoints[landLength / 2 + x*landLength][landLength + z*landLength] = (moisturePoints[x*landLength][landLength + z*landLength] + moisturePoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength + landLength] + moisturePoints[landLength + x*landLength][landLength + z*landLength] + moisturePoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength]) / 4 + (randomH / 500.0f)*amplitude;
-							}
-							else {
-								//moisturePoints[landLength/2+x*landLength][landLength+z*landLength] = (moisturePoints[x*landLength][landLength+z*landLength] + moisturePoints[landLength+x*landLength][landLength+z*landLength] + moisturePoints[landLength/2+x*landLength][landLength/2+z*landLength])/3 + (randomH/500.0f)*amplitude;
-								moisturePoints[landLength / 2 + x*landLength][landLength + z*landLength] = (moisturePoints[x*landLength][landLength + z*landLength] + moisturePoints[landLength + x*landLength][landLength + z*landLength] + moisturePoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength]) / 3 + (randomH / 500.0f)*amplitude;
-							}
-							landDone[landLength / 2 + x*landLength][landLength + z*landLength] = true;
-						}
-						if (landDone[landLength + x*landLength][landLength / 2 + z*landLength] == false) {	//east
-							randomH = (rand() % int(1000)) - 500;
-							if (x != LandChunkSize / landLength - 1) {
-								moisturePoints[landLength + x*landLength][landLength / 2 + z*landLength] = (moisturePoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + moisturePoints[landLength + x*landLength][landLength + z*landLength] + moisturePoints[landLength + x*landLength + landLength / 2][landLength / 2 + z*landLength] + moisturePoints[landLength + x*landLength][z*landLength]) / 4 + (randomH / 500.0f)*amplitude;
-							}
-							else {
-								//moisturePoints[landLength+x*landLength][landLength/2+z*landLength] = (moisturePoints[landLength/2+x*landLength][landLength/2+z*landLength] + moisturePoints[landLength+x*landLength][landLength+z*landLength] + moisturePoints[landLength+x*landLength][z*landLength])/3 + (randomH/500.0f)*amplitude;
-								moisturePoints[landLength + x*landLength][landLength / 2 + z*landLength] = (moisturePoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + moisturePoints[landLength + x*landLength][landLength + z*landLength] + moisturePoints[landLength + x*landLength][z*landLength]) / 3 + (randomH / 500.0f)*amplitude;
-							}
-							landDone[landLength + x*landLength][landLength / 2 + z*landLength] = true;
-						}
-						if (landDone[landLength / 2 + x*landLength][z*landLength] == false) {	//south
-							randomH = (rand() % int(1000)) - 500;
-							if (z != 0) {
-								moisturePoints[landLength / 2 + x*landLength][z*landLength] = (moisturePoints[x*landLength][z*landLength] + moisturePoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + moisturePoints[landLength + x*landLength][z*landLength] + moisturePoints[landLength / 2 + x*landLength][z*landLength - landLength / 2]) / 4 + (randomH / 500.0f)*amplitude;
-							}
-							else {
-								//moisturePoints[landLength/2+x*landLength][z*landLength] = (moisturePoints[x*landLength][z*landLength] + moisturePoints[landLength/2+x*landLength][landLength/2+z*landLength] + moisturePoints[landLength+x*landLength][z*landLength])/3 + (randomH/500.0f)*amplitude;
-								moisturePoints[landLength / 2 + x*landLength][z*landLength] = (moisturePoints[x*landLength][z*landLength] + moisturePoints[landLength / 2 + x*landLength][landLength / 2 + z*landLength] + moisturePoints[landLength + x*landLength][z*landLength]) / 3 + (randomH / 500.0f)*amplitude;
-							}
-							landDone[landLength / 2 + x*landLength][z*landLength] = true;
-						}
-					}
-				}
-
-				amplitude *= 0.5f;
-				landLength *= 0.5;
-			}
-			///////////////////////////
-			landLength = LandChunkSize;
-			amplitude = 1.0f;
-
-
-			for (int z = 0; z < LandChunkSize + 1; z++) {
-				for (int x = 0; x < LandChunkSize + 1; x++) {
-					if (m == 0 || m == 1) {
-						moisturePoints_y[x][m][z] = moisturePoints[x][z];
-					}
-					if (m == 2 || m == 3) {
-						moisturePoints_x[m - 2][z][x] = moisturePoints[x][z];
-					}
-					if (m == 4 || m == 5) {
-						moisturePoints_z[x][z][m - 4] = moisturePoints[x][z];
-					}
-				}
-			}
-
-		}
-
-
-	}
-
-
-	void create() {
-		planetPos = double3(0.0, 0.0, 0.0);
-		camToPlanet = double3(camPos.x - planetPos.x, camPos.y - planetPos.y, camPos.z - planetPos.z);
-		normalizedCamToPlanet = normalize(camToPlanet);
-		cubePos = normalizedCamToPlanet;
-		cubizePoint(cubePos);
-
-
-		// large
-		createLand();
-		createTemperature();
-		createMoisture();
-
-
-		for (int y = -(LandChunkSize / 2); y < (LandChunkSize / 2) + 1; y++) {
-			for (int z = -(LandChunkSize / 2); z < (LandChunkSize / 2) + 1; z++) {
-				int x = -1;
-				planetPoints_x[0][y + (LandChunkSize / 2)][z + (LandChunkSize / 2)].x = float(x) * sqrt(1.0f - ((float(y) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)) / 2) - ((float(z) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)) / 2) + ((float(y) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)) / 3));
-				planetPoints_x[0][y + (LandChunkSize / 2)][z + (LandChunkSize / 2)].y = float(y) / (LandChunkSize / 2) * sqrt(1.0f - ((float(z) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)) / 2) - (float(x)*float(x) / 2) + ((float(z) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)*float(x)*float(x)) / 3));
-				planetPoints_x[0][y + (LandChunkSize / 2)][z + (LandChunkSize / 2)].z = float(z) / (LandChunkSize / 2) * sqrt(1.0f - (float(x)*float(x) / 2) - ((float(y) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)) / 2) + ((float(x)*float(x)*float(y) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)) / 3));
-				x = 1;
-				planetPoints_x[1][y + (LandChunkSize / 2)][z + (LandChunkSize / 2)].x = float(x) * sqrt(1.0f - ((float(y) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)) / 2) - ((float(z) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)) / 2) + ((float(y) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)) / 3));
-				planetPoints_x[1][y + (LandChunkSize / 2)][z + (LandChunkSize / 2)].y = float(y) / (LandChunkSize / 2) * sqrt(1.0f - ((float(z) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)) / 2) - (float(x)*float(x) / 2) + ((float(z) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)*float(x)*float(x)) / 3));
-				planetPoints_x[1][y + (LandChunkSize / 2)][z + (LandChunkSize / 2)].z = float(z) / (LandChunkSize / 2) * sqrt(1.0f - (float(x)*float(x) / 2) - ((float(y) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)) / 2) + ((float(x)*float(x)*float(y) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)) / 3));
-			}
-		}
-
-		for (int x = -(LandChunkSize / 2); x < (LandChunkSize / 2) + 1; x++) {
-			for (int z = -(LandChunkSize / 2); z < (LandChunkSize / 2) + 1; z++) {
-				int y = -1;
-				planetPoints_y[x + (LandChunkSize / 2)][0][z + (LandChunkSize / 2)].x = float(x) / (LandChunkSize / 2) * sqrt(1.0f - ((float(y)*float(y)) / 2) - ((float(z) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)) / 2) + ((float(y)*float(y)*float(z) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)) / 3));
-				planetPoints_y[x + (LandChunkSize / 2)][0][z + (LandChunkSize / 2)].y = float(y) * sqrt(1.0f - ((float(z) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)) / 2) - ((float(x) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)) / 2) + ((float(z) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)) / 3));
-				planetPoints_y[x + (LandChunkSize / 2)][0][z + (LandChunkSize / 2)].z = float(z) / (LandChunkSize / 2) * sqrt(1.0f - ((float(x) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)) / 2) - ((float(y)*float(y)) / 2) + ((float(x) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)*float(y)*float(y)) / 3));
-				y = 1;
-				planetPoints_y[x + (LandChunkSize / 2)][1][z + (LandChunkSize / 2)].x = float(x) / (LandChunkSize / 2) * sqrt(1.0f - ((float(y)*float(y)) / 2) - ((float(z) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)) / 2) + ((float(y)*float(y)*float(z) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)) / 3));
-				planetPoints_y[x + (LandChunkSize / 2)][1][z + (LandChunkSize / 2)].y = float(y) * sqrt(1.0f - ((float(z) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)) / 2) - ((float(x) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)) / 2) + ((float(z) / (LandChunkSize / 2)*float(z) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)) / 3));
-				planetPoints_y[x + (LandChunkSize / 2)][1][z + (LandChunkSize / 2)].z = float(z) / (LandChunkSize / 2) * sqrt(1.0f - ((float(x) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)) / 2) - ((float(y)*float(y)) / 2) + ((float(x) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)*float(y)*float(y)) / 3));
-			}
-		}
-
-		for (int x = -(LandChunkSize / 2); x < (LandChunkSize / 2) + 1; x++) {
-			for (int y = -(LandChunkSize / 2); y < (LandChunkSize / 2) + 1; y++) {
-				int z = -1;
-				planetPoints_z[x + (LandChunkSize / 2)][y + (LandChunkSize / 2)][0].x = float(x) / (LandChunkSize / 2) * sqrt(1.0f - ((float(y) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)) / 2) - (float(z)*float(z) / 2) + ((float(y) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)*float(z)*float(z)) / 3));
-				planetPoints_z[x + (LandChunkSize / 2)][y + (LandChunkSize / 2)][0].y = float(y) / (LandChunkSize / 2) * sqrt(1.0f - (float(z)*float(z) / 2) - ((float(x) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)) / 2) + ((float(z)*float(z)*float(x) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)) / 3));
-				planetPoints_z[x + (LandChunkSize / 2)][y + (LandChunkSize / 2)][0].z = float(z) * sqrt(1.0f - ((float(x) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)) / 2) - ((float(y) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)) / 2) + ((float(x) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)) / 3));
-				z = 1;
-				planetPoints_z[x + (LandChunkSize / 2)][y + (LandChunkSize / 2)][1].x = float(x) / (LandChunkSize / 2) * sqrt(1.0f - ((float(y) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)) / 2) - (float(z)*float(z) / 2) + ((float(y) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)*float(z)*float(z)) / 3));
-				planetPoints_z[x + (LandChunkSize / 2)][y + (LandChunkSize / 2)][1].y = float(y) / (LandChunkSize / 2) * sqrt(1.0f - (float(z)*float(z) / 2) - ((float(x) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)) / 2) + ((float(z)*float(z)*float(x) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)) / 3));
-				planetPoints_z[x + (LandChunkSize / 2)][y + (LandChunkSize / 2)][1].z = float(z) * sqrt(1.0f - ((float(x) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)) / 2) - ((float(y) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)) / 2) + ((float(x) / (LandChunkSize / 2)*float(x) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)*float(y) / (LandChunkSize / 2)) / 3));
-			}
-		}
-
-
-		counter = 0;
-		for (int z = 0; z < (LandChunkSize + 1); z++) {
-			for (int x = 0; x < (LandChunkSize + 1); x++) {
-				vertices[0][counter].pos = planetPoints_y[x][0][z];
-				vertices[0][counter].normal = planetPoints_y[x][0][z];
-				vertices[0][counter].texCoord = XMFLOAT2(float(x), float(z));
-				vertices[0][counter].biomeHeight = landPoints_y[x][0][z];
-				vertices[0][counter].heat = heatPoints_y[x][0][z];
-				vertices[0][counter].moisture = moisturePoints_y[x][0][z];
-				counter++;
-			}
-		}
-		counter = 0;
-		for (int z = 0; z < (LandChunkSize + 1); z++) {
-			for (int x = 0; x < (LandChunkSize + 1); x++) {
-				vertices[1][counter].pos = planetPoints_y[x][1][z];
-				vertices[1][counter].normal = planetPoints_y[x][1][z];
-				vertices[1][counter].texCoord = XMFLOAT2(float(x), float(z));
-				vertices[1][counter].biomeHeight = landPoints_y[x][1][z];
-				vertices[1][counter].heat = heatPoints_y[x][1][z];
-				vertices[1][counter].moisture = moisturePoints_y[x][1][z];
-				counter++;
-			}
-		}
-		counter = 0;
-		for (int y = 0; y < (LandChunkSize + 1); y++) {
-			for (int z = 0; z < (LandChunkSize + 1); z++) {
-				vertices[2][counter].pos = planetPoints_x[0][y][z];
-				vertices[2][counter].normal = planetPoints_x[0][y][z];
-				vertices[2][counter].texCoord = XMFLOAT2(float(y), float(z));
-				vertices[2][counter].biomeHeight = landPoints_x[0][y][z];
-				vertices[2][counter].heat = heatPoints_x[0][y][z];
-				vertices[2][counter].moisture = moisturePoints_x[0][y][z];
-				counter++;
-			}
-		}
-		counter = 0;
-		for (int y = 0; y < (LandChunkSize + 1); y++) {
-			for (int z = 0; z < (LandChunkSize + 1); z++) {
-				vertices[3][counter].pos = planetPoints_x[1][y][z];
-				vertices[3][counter].normal = planetPoints_x[1][y][z];
-				vertices[3][counter].texCoord = XMFLOAT2(float(y), float(z));
-				vertices[3][counter].biomeHeight = landPoints_x[1][y][z];
-				vertices[3][counter].heat = heatPoints_x[1][y][z];
-				vertices[3][counter].moisture = moisturePoints_x[1][y][z];
-				counter++;
-			}
-		}
-		counter = 0;
-		for (int y = 0; y < (LandChunkSize + 1); y++) {
-			for (int x = 0; x < (LandChunkSize + 1); x++) {
-				vertices[4][counter].pos = planetPoints_z[x][y][0];
-				vertices[4][counter].normal = planetPoints_z[x][y][0];
-				vertices[4][counter].texCoord = XMFLOAT2(float(x), float(y));
-				vertices[4][counter].biomeHeight = landPoints_z[x][y][0];
-				vertices[4][counter].heat = heatPoints_z[x][y][0];
-				vertices[4][counter].moisture = moisturePoints_z[x][y][0];
-				counter++;
-			}
-		}
-		counter = 0;
-		for (int y = 0; y < (LandChunkSize + 1); y++) {
-			for (int x = 0; x < (LandChunkSize + 1); x++) {
-				vertices[5][counter].pos = planetPoints_z[x][y][1];
-				vertices[5][counter].normal = planetPoints_z[x][y][1];
-				vertices[5][counter].texCoord = XMFLOAT2(float(x), float(y));
-				vertices[5][counter].biomeHeight = landPoints_z[x][y][1];
-				vertices[5][counter].heat = heatPoints_z[x][y][1];
-				vertices[5][counter].moisture = moisturePoints_z[x][y][1];
-				counter++;
-			}
-		}
-
-
-		counter = 0;
-		for (int i = 0; i < 6; i++) {
-			for (int z = 0; z < LandChunkSize; z++) {
-				for (int x = 0; x < LandChunkSize; x++) {
-					indices[i][counter] = x + z*(LandChunkSize + 1);
-					counter++;
-					indices[i][counter] = x + 1 + z*(LandChunkSize + 1);
-					counter++;
-					indices[i][counter] = x + (LandChunkSize + 2) + z*(LandChunkSize + 1);
-					counter++;
-					indices[i][counter] = x + z*(LandChunkSize + 1);
-					counter++;
-					indices[i][counter] = x + (LandChunkSize + 2) + z*(LandChunkSize + 1);
-					counter++;
-					indices[i][counter] = x + (LandChunkSize + 1) + z*(LandChunkSize + 1);
-					counter++;
-				}
-			}
-		}
-
-		for (int i = 0; i < 6; i++) {
 			D3D11_BUFFER_DESC indexBufferDesc;
-			ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
-
-			indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-			indexBufferDesc.ByteWidth = sizeof(indices[i]);
-			indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-			indexBufferDesc.CPUAccessFlags = 0;
-			indexBufferDesc.MiscFlags = 0;
-
-			D3D11_SUBRESOURCE_DATA iinitData;
-
-			iinitData.pSysMem = indices;
-			d3d11Device->CreateBuffer(&indexBufferDesc, &iinitData, &indexBuffer[i]);
-
+			D3D11_SUBRESOURCE_DATA indexBufferData;
 			D3D11_BUFFER_DESC vertexBufferDesc;
-			ZeroMemory(&vertexBufferDesc, sizeof(vertexBufferDesc));
+			D3D11_SUBRESOURCE_DATA initialVertexBufferData;
+			D3D11_MAPPED_SUBRESOURCE updatedVertexBufferData;
 
-			vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-			vertexBufferDesc.ByteWidth = sizeof(vertices[i]);
-			vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-			vertexBufferDesc.CPUAccessFlags = 0;
-			vertexBufferDesc.MiscFlags = 0;
+		public:
+			double3 firstCamPos;
 
-			D3D11_SUBRESOURCE_DATA vertexBufferData;
+			void create() {
 
-			ZeroMemory(&vertexBufferData, sizeof(vertexBufferData));
-			vertexBufferData.pSysMem = vertices[i];
-			hr = d3d11Device->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &vertBuffer[i]);
-		}
-	}
-
-	void update() {
-		camToPlanet = double3(camPos.x - planetPos.x, camPos.y - planetPos.y, camPos.z - planetPos.z);
-		normalizedCamToPlanet = normalize(camToPlanet);
-
-		//Reset cube1World
-		groundWorld = XMMatrixIdentity();
-
-		//Define cube1's world space matrix
-		Scale = XMMatrixScaling(planetRadius, planetRadius, planetRadius);
-		Translation = XMMatrixTranslation(planetPos.x - camPos.x, planetPos.y - camPos.y, planetPos.z - camPos.z);
-
-		//Set cube1's world space using the transformations
-		groundWorld = Scale * Translation;
-
-		//Omit futhest face
-		for (int i = 0; i < 8; i++)
-			drawFace[i] = true;
-
-		if (camPos.x >= 0.0) {
-			if (camPos.x / positive(camPos.z) >= 1.0) {
-				if (camPos.x / positive(camPos.y) >= 1.0)
-					drawFace[2] = false;
-			}
-		}
-		else {
-			if (positive(camPos.x) / positive(camPos.z) >= 1.0) {
-				if (positive(camPos.x) / positive(camPos.y) >= 1.0)
-					drawFace[3] = false;
-			}
-		}
-		if (camPos.y >= 0.0) {
-			if (camPos.y / positive(camPos.z) >= 1.0) {
-				if (camPos.y / positive(camPos.x) >= 1.0)
-					drawFace[0] = false;
-			}
-		}
-		else {
-			if (positive(camPos.y) / positive(camPos.z) >= 1.0) {
-				if (positive(camPos.y) / positive(camPos.x) >= 1.0)
-					drawFace[1] = false;
-			}
-		}
-		if (camPos.z >= 0.0) {
-			if (camPos.z / positive(camPos.x) >= 1.0) {
-				if (camPos.z / positive(camPos.y) >= 1.0)
-					drawFace[4] = false;
-			}
-		}
-		else {
-			if (positive(camPos.z) / positive(camPos.x) >= 1.0) {
-				if (positive(camPos.z) / positive(camPos.y) >= 1.0)
-					drawFace[5] = false;
-			}
-		}
-
-		for (int i = 0; i < 6; i++) {
-			if (drawFace[i] == false) {
-				if (float(i) / 2 == int(float(i) / 2)) {// Even number
-					closestFace = i + 1;
+				counter = 0;
+				for (int z = 0; z < chunkLength + 1; z++) {
+					for (int x = 0; x < chunkLength + 1; x++) {
+						verticesInitial[counter] = PlanetVertex(float(x - chunkLength / 2) / 16.0f, 0.0f, float(z - chunkLength / 2) / 16.0f, float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f);
+						counter++;
+					}
 				}
-				else {
-					closestFace = i - 1;
+
+
+
+				counter = 0;
+
+				for (int x = 0; x < chunkLength; x++) {
+					for (int z = 0; z < chunkLength; z++) {
+						indices[counter] = x + z * (chunkLength + 1);
+						counter++;
+						indices[counter] = x + 1 + z * (chunkLength + 1);
+						counter++;
+						indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1);
+						counter++;
+						indices[counter] = x + z * (chunkLength + 1);
+						counter++;
+						indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1);
+						counter++;
+						indices[counter] = x + (chunkLength + 1) + z * (chunkLength + 1);
+						counter++;
+					}
 				}
+
+				ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
+
+				indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+				indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+				indexBufferDesc.CPUAccessFlags = 0;
+				indexBufferDesc.MiscFlags = 0;
+				indexBufferDesc.ByteWidth = sizeof(indices);
+
+				indexBufferData.pSysMem = indices;
+				d3d11Device->CreateBuffer(&indexBufferDesc, &indexBufferData, &indexBuffer);
+
+				ZeroMemory(&initialVertexBufferData, sizeof(initialVertexBufferData));
+				ZeroMemory(&vertexBufferDesc, sizeof(vertexBufferDesc));
+				ZeroMemory(&updatedVertexBufferData, sizeof(D3D11_MAPPED_SUBRESOURCE));
+
+				vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+				vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+				vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+				vertexBufferDesc.MiscFlags = 0;
+				vertexBufferDesc.ByteWidth = sizeof(verticesInitial);
+
+				initialVertexBufferData.pSysMem = verticesInitial;
+				hr = d3d11Device->CreateBuffer(&vertexBufferDesc, &initialVertexBufferData, &vertBuffer);
 			}
-		}
 
-		//////////////////////////////////
-		cubePos = normalizedCamToPlanet;
-		cubizePoint(cubePos);
-		//////////////////////////////////
+			void update(double3 camPos) {
+				groundWorld = XMMatrixIdentity();
+				Scale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
+				Translation = XMMatrixTranslation(float(firstCamPos.x - camPos.x), float(firstCamPos.y - camPos.y), float(firstCamPos.z - camPos.z));
+				//Translation = XMMatrixTranslation(0.0f, -5.0f, 0.0f);
+				groundWorld = Scale * Translation;
+			}
 
-		int counters[6];
+			double3 position[chunkLength+1][chunkLength+1];
 
-		for (int i = 0; i < 6; i++)
-			counters[i] = 0;
+			void updateChunkData(quad chunkData) {
+				for (int z = 0; z < (chunkLength + 1); z++) {
+					for (int x = 0; x < (chunkLength + 1); x++) {
+						double3 temp = chunkData.posSquare;
 
-		for (int n = -2; n < 3; n++) {
-			for (int m = -2; m < 3; m++) {
-				if (closestFace == 0) {		 // y
-					if (floor(128 * cubePos.z) + 128 + n >= 0 && floor(128 * cubePos.z) + 128 + n < 256) {
-						if (floor(128 * cubePos.x) + 128 + m >= 0 && floor(128 * cubePos.x) + 128 + m < 256) {
-							omitIndices[closestFace][counters[closestFace]] = (256 * (floor(128 * cubePos.z) + 128 + n) + floor(cubePos.x * 128) + 128 + m) * 6;
-							if (omitIndices[closestFace][counters[closestFace]] != omitIndices[closestFace][counters[closestFace] - 1] || counters[closestFace] == 0) {
 
-								counters[closestFace]++;
+
+						temp.x = double(verticesInitial[z * (chunkLength+1) + x].pos.x) * chunkData.length;
+						temp.y = double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * chunkData.length;
+						temp.z = double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * chunkData.length;
+
+						temp.x += chunkData.posSquare.x;
+						temp.y += chunkData.posSquare.y;
+						temp.z += chunkData.posSquare.z;
+
+
+
+						temp.x /= maxLength;
+						temp.y /= maxLength;
+						temp.z /= maxLength;
+
+						temp = spherize(temp);
+
+						
+						double3 tempNormal = temp;
+
+						temp.x *= maxLength;
+						temp.y *= maxLength;
+						temp.z *= maxLength;
+
+						terrainPoint.generateTerrainPoint(tempNormal);
+
+						verticesFinal[z * (chunkLength + 1) + x].height = terrainPoint.height_f;
+						verticesFinal[z * (chunkLength + 1) + x].landTypeHeight = terrainPoint.landTypeHeight_f;
+
+						temp.x += terrainPoint.terrain.x;
+						temp.y += terrainPoint.terrain.y;
+						temp.z += terrainPoint.terrain.z;
+
+						
+
+						temp.x = temp.x - firstCamPos.x;
+						temp.y = temp.y - firstCamPos.y;
+						temp.z = temp.z - firstCamPos.z;
+
+						position[x][z] = temp;
+
+						verticesFinal[z * (chunkLength + 1) + x].pos = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
+						verticesFinal[z * (chunkLength + 1) + x].texCoord = XMFLOAT2(float(double(verticesInitial[z * (chunkLength + 1) + x].pos.x) * chunkData.length), float(double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * chunkData.length));
+					}
+				}
+
+				double3 V;
+				double3 W;
+				double3 f_normals[2][chunkLength][chunkLength];
+				double3 normals[chunkLength+1][chunkLength+1];
+
+				counter = 0;
+				for (int z = 0; z < chunkLength; z++) {
+					for (int x = 0; x < chunkLength; x++) {
+						for (int i = 0; i < 2; i++) {
+							if (i == 0) {
+								V.x = position[x + 1][z + 1].x - position[x][z].x;
+								V.y = position[x + 1][z + 1].y - position[x][z].y;
+								V.z = position[x + 1][z + 1].z - position[x][z].z;
+								W.x = position[x + 1][z].x - position[x][z].x;
+								W.y = position[x + 1][z].y - position[x][z].y;
+								W.z = position[x + 1][z].z - position[x][z].z;
+							}
+							if (i == 1) {
+								V.x = position[x + 1][z + 1].x - position[x][z].x;
+								V.y = position[x + 1][z + 1].y - position[x][z].y;
+								V.z = position[x + 1][z + 1].z - position[x][z].z;
+								W.x = position[x][z + 1].x - position[x][z].x;
+								W.y = position[x][z + 1].y - position[x][z].y;
+								W.z = position[x][z + 1].z - position[x][z].z;
+							}
+							f_normals[i][x][z].x = (V.y*W.z) - (V.z*W.y);
+							f_normals[i][x][z].y = (V.z*W.x) - (V.x*W.z);
+							f_normals[i][x][z].z = (V.x*W.y) - (V.y*W.x);
+							f_normals[i][x][z] = normalize(f_normals[i][x][z]);
+							if (chunkData.posSquare.y >= 0.0) {
+								if (f_normals[i][x][z].y < 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
+							}
+							else if (chunkData.posSquare.y < 0.0) {
+								if (f_normals[i][x][z].y > 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
 							}
 						}
-						else if (floor(128 * cubePos.x) + 128 + m < 0) {
-							// keep but do later
-
-							/*
-							omitIndices[2][counters[2]] = (256 * (positive(floor(cubePos.x * 128) + 128 + m)-1) + floor(128 * cubePos.z) + 128 + n) * 6;
-							if (omitIndices[2][counters[2]] != omitIndices[2][counters[2] - 1] || counters[2] == 0) {
-
-								counters[2]++;
-							}
-							*/
-						}
-						else {
-
-
-
-
-						}
-					}
-					else if (floor(128 * cubePos.z) + 128 + n < 0) {
-						if (floor(128 * cubePos.x) + 128 + m >= 0 && floor(128 * cubePos.x) + 128 + m < 256) {
-
-
-
-
-						}
-						else if (floor(128 * cubePos.x) + 128 + m < 0) {
-
-
-
-						}
-						else {
-
-
-
-
-						}
-					}
-					else {
-						if (floor(128 * cubePos.x) + 128 + m >= 0 && floor(128 * cubePos.x) + 128 + m < 256) {
-
-
-
-
-						}
-						else if (floor(128 * cubePos.x) + 128 + m < 0) {
-
-
-
-						}
-						else {
-
-						}
 					}
 				}
-
-				if (closestFace == 1) {		 // y
-					if (floor(128 * cubePos.z) + 128 + n >= 0 && floor(128 * cubePos.z) + 128 + n < 256) {
-						if (floor(128 * cubePos.x) + 128 + m >= 0 && floor(128 * cubePos.x) + 128 + m < 256) {
-							omitIndices[closestFace][counters[closestFace]] = (256 * (floor(128 * cubePos.z) + 128 + n) + floor(cubePos.x * 128) + 128 + m) * 6;
-							if (omitIndices[closestFace][counters[closestFace]] != omitIndices[closestFace][counters[closestFace] - 1] || counters[closestFace] == 0) {
-
-								counters[closestFace]++;
-							}
-
+				//*
+				for (int z = 0; z < chunkLength + 1; z++) {
+					for (int x = 0; x < chunkLength + 1; x++) {
+						if (x != 0 && z != 0 && x != chunkLength && z != chunkLength) {
+							normals[x][z].x = ((f_normals[0][x - 1][z - 1].x + f_normals[1][x - 1][z - 1].x) / 2 + f_normals[0][x - 1][z].x + (f_normals[0][x][z].x + f_normals[1][x][z].x) / 2 + f_normals[1][x][z - 1].x) / 4;
+							normals[x][z].y = ((f_normals[0][x - 1][z - 1].y + f_normals[1][x - 1][z - 1].y) / 2 + f_normals[0][x - 1][z].y + (f_normals[0][x][z].y + f_normals[1][x][z].y) / 2 + f_normals[1][x][z - 1].y) / 4;
+							normals[x][z].z = ((f_normals[0][x - 1][z - 1].z + f_normals[1][x - 1][z - 1].z) / 2 + f_normals[0][x - 1][z].z + (f_normals[0][x][z].z + f_normals[1][x][z].z) / 2 + f_normals[1][x][z - 1].z) / 4;
+							normals[x][z] = normalize(normals[x][z]);
 						}
-						else if (floor(128 * cubePos.x) + 128 + m < 0) {
-
+						else if (x == chunkLength) {////////////CHANGE//////////////
+							normals[x][z].x = f_normals[0][x-1][z].x + f_normals[1][x-1][z].x;
+							normals[x][z].y = f_normals[0][x-1][z].y + f_normals[1][x-1][z].y;
+							normals[x][z].z = f_normals[0][x-1][z].z + f_normals[1][x-1][z].z;
+							normals[x][z] = normalize(normals[x][z]);
 						}
-						else {
-
-
-
+						else if (z == chunkLength) {
+							normals[x][z].x = f_normals[0][x][z - 1].x + f_normals[1][x][z - 1].x;
+							normals[x][z].y = f_normals[0][x][z - 1].y + f_normals[1][x][z - 1].y;
+							normals[x][z].z = f_normals[0][x][z - 1].z + f_normals[1][x][z - 1].z;
+							normals[x][z] = normalize(normals[x][z]);
 						}
-					}
-					else if (floor(128 * cubePos.z) + 128 + n < 0) {
-						if (floor(128 * cubePos.x) + 128 + m >= 0 && floor(128 * cubePos.x) + 128 + m < 256) {
-
-
+						else {////////////CHANGE//////////////
+							normals[x][z].x = f_normals[0][x][z].x + f_normals[1][x][z].x;
+							normals[x][z].y = f_normals[0][x][z].y + f_normals[1][x][z].y;
+							normals[x][z].z = f_normals[0][x][z].z + f_normals[1][x][z].z;
+							normals[x][z] = normalize(normals[x][z]);
 						}
-						else if (floor(128 * cubePos.x) + 128 + m < 0) {
-
-
-
-						}
-						else {
-
-
-						}
-					}
-					else {
-						if (floor(128 * cubePos.x) + 128 + m >= 0 && floor(128 * cubePos.x) + 128 + m < 256) {
-
-
-						}
-						else if (floor(128 * cubePos.x) + 128 + m < 0) {
-
-						}
-						else {
-
-
-						}
+						verticesFinal[z * (chunkLength + 1) + x].normal = XMFLOAT3(float(normals[x][z].x), float(normals[x][z].y), float(normals[x][z].z));
 					}
 				}
-
-				else if (closestFace == 2) { // x
-					if (floor(128 * cubePos.y) + 128 + n >= 0 && floor(128 * cubePos.y) + 128 + n < 256) {
-						if (floor(128 * cubePos.z) + 128 + m >= 0 && floor(128 * cubePos.z) + 128 + m < 256) {
-							omitIndices[closestFace][counters[closestFace]] = (256 * (floor(128 * cubePos.y) + 128 + n) + floor(cubePos.z * 128) + 128 + m) * 6;
-							if (omitIndices[closestFace][counters[closestFace]] != omitIndices[closestFace][counters[closestFace] - 1] || counters[closestFace] == 0) {
-
-								counters[closestFace]++;
-							}
-
+				//*/
+				/*
+				for (int z = 0; z < chunkLength + 1; z++) {
+					for (int x = 0; x < chunkLength + 1; x++) {
+						if (x != chunkLength && z != chunkLength) {
+							normals[x][z].x = f_normals[0][x][z].x + f_normals[1][x][z].x;
+							normals[x][z].y = f_normals[0][x][z].y + f_normals[1][x][z].y;
+							normals[x][z].z = f_normals[0][x][z].z + f_normals[1][x][z].z;
+							normals[x][z] = normalize(normals[x][z]);
 						}
-						else if (floor(128 * cubePos.z) + 128 + m >= 0 && floor(128 * cubePos.z) + 128 + m < 256) {
-
-
-						}
-						else {
-
-
-						}
-					}
-					else if (floor(128 * cubePos.y) + 128 + n < 0) {
-						if (floor(128 * cubePos.z) + 128 + m >= 0 && floor(128 * cubePos.z) + 128 + m < 256) {
-
-
-						}
-						else if (floor(128 * cubePos.z) + 128 + m < 0) {
-
-
-
+						else if (x == chunkLength) {////////////CHANGE//////////////
+							normals[x][z].x = f_normals[0][x-1][z].x + f_normals[1][x-1][z].x;
+							normals[x][z].y = f_normals[0][x-1][z].y + f_normals[1][x-1][z].y;
+							normals[x][z].z = f_normals[0][x-1][z].z + f_normals[1][x-1][z].z;
 						}
 						else {
-
+							normals[x][z].x = f_normals[0][x][z-1].x + f_normals[1][x][z-1].x;
+							normals[x][z].y = f_normals[0][x][z-1].y + f_normals[1][x][z-1].x;
+							normals[x][z].z = f_normals[0][x][z-1].z + f_normals[1][x][z-1].x;
 						}
-					}
-					else {
-						if (floor(128 * cubePos.z) + 128 + m >= 0 && floor(128 * cubePos.z) + 128 + m < 256) {
-
-
-
-						}
-						else if (floor(128 * cubePos.z) + 128 + m < 0) {
-
-
-						}
-						else {
-
-
-
-						}
+						verticesFinal[z * (chunkLength + 1) + x].normal = XMFLOAT3(float(normals[x][z].x), float(normals[x][z].y), float(normals[x][z].z));
 					}
 				}
+				//*/
 
-				else if (closestFace == 3) { // x
-					if (floor(128 * cubePos.y) + 128 + n >= 0 && floor(128 * cubePos.y) + 128 + n < 256) {
-						if (floor(128 * cubePos.z) + 128 + m >= 0 && floor(128 * cubePos.z) + 128 + m < 256) {
-							omitIndices[closestFace][counters[closestFace]] = (256 * (floor(128 * cubePos.y) + 128 + n) + floor(cubePos.z * 128) + 128 + m) * 6;
-							if (omitIndices[closestFace][counters[closestFace]] != omitIndices[closestFace][counters[closestFace] - 1] || counters[closestFace] == 0) {
-
-								counters[closestFace]++;
-							}
-
-						}
-						else if (floor(128 * cubePos.z) + 128 + m < 0) {
-
-
-
-						}
-						else {
-
-
-						}
-					}
-					else if (floor(128 * cubePos.y) + 128 + n < 0) {
-						if (floor(128 * cubePos.z) + 128 + m >= 0 && floor(128 * cubePos.z) + 128 + m < 256) {
-
-
-
-						}
-						else if (floor(128 * cubePos.z) + 128 + m < 0) {
-
-
-						}
-						else {
-
-
-						}
-					}
-					else {
-						if (floor(128 * cubePos.z) + 128 + m >= 0 && floor(128 * cubePos.z) + 128 + m < 256) {
-
-
-
-						}
-						else if (floor(128 * cubePos.z) + 128 + m < 0) {
-
-
-						}
-						else {
-
-
-						}
-					}
-				}
-
-				else if (closestFace == 4) { // z
-					if (floor(128 * cubePos.y) + 128 + n >= 0 && floor(128 * cubePos.y) + 128 + n < 256) {
-						if (floor(128 * cubePos.x) + 128 + m >= 0 && floor(128 * cubePos.x) + 128 + m < 256) {
-							omitIndices[closestFace][counters[closestFace]] = (256 * (floor(128 * cubePos.y) + 128 + n) + floor(cubePos.x * 128) + 128 + m) * 6;
-							if (omitIndices[closestFace][counters[closestFace]] != omitIndices[closestFace][counters[closestFace] - 1] || counters[closestFace] == 0) {
-
-								counters[closestFace]++;
-							}
-						}
-						else if (floor(128 * cubePos.x) + 128 + m < 0) {
-
-
-						}
-						else {
-
-
-						}
-					}
-					else if (floor(128 * cubePos.y) + 128 + n < 0) {
-						if (floor(128 * cubePos.x) + 128 + m >= 0 && floor(128 * cubePos.x) + 128 + m < 256) {
-
-
-						}
-						else if (floor(128 * cubePos.x) + 128 + m < 0) {
-
-
-						}
-						else {
-
-						}
-					}
-					else {
-						if (floor(128 * cubePos.x) + 128 + m >= 0 && floor(128 * cubePos.x) + 128 + m < 256) {
-
-
-						}
-						else if (floor(128 * cubePos.x) + 128 + m < 0) {
-
-
-						}
-						else {
-
-
-						}
-					}
-				}
-
-				else if (closestFace == 5) { // z
-					if (floor(128 * cubePos.y) + 128 + n >= 0 && floor(128 * cubePos.y) + 128 + n < 256) {
-						if (floor(128 * cubePos.x) + 128 + m >= 0 && floor(128 * cubePos.x) + 128 + m < 256) {
-							omitIndices[closestFace][counters[closestFace]] = (256 * (floor(128 * cubePos.y) + 128 + n) + floor(cubePos.x * 128) + 128 + m) * 6;
-							if (omitIndices[closestFace][counters[closestFace]] != omitIndices[closestFace][counters[closestFace] - 1] || counters[closestFace] == 0) {
-
-								counters[closestFace]++;
-							}
-
-						}
-						else if (floor(128 * cubePos.x) + 128 + m < 0) {
-
-
-
-						}
-						else {
-
-
-						}
-					}
-					else if (floor(128 * cubePos.y) + 128 + n < 0) {
-						if (floor(128 * cubePos.x) + 128 + m >= 0 && floor(128 * cubePos.x) + 128 + m < 256) {
-
-
-						}
-						else if (floor(128 * cubePos.x) + 128 + m < 0) {
-
-
-						}
-						else {
-
-						}
-					}
-					else {
-						if (floor(128 * cubePos.x) + 128 + m >= 0 && floor(128 * cubePos.x) + 128 + m < 256) {
-
-
-						}
-						else if (floor(128 * cubePos.x) + 128 + m < 0) {
-
-
-						}
-						else {
-
-
-						}
-					}
-				}
-
-
+				d3d11DevCon->Map(vertBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &updatedVertexBufferData);
+				memcpy(updatedVertexBufferData.pData, verticesFinal, sizeof(verticesFinal));
+				d3d11DevCon->Unmap(vertBuffer, 0);
 			}
-		}
 
+			void draw() {
+				//Set Vertex and Pixel Shaders
+				d3d11DevCon->VSSetShader(PLANET_VS, 0, 0);
+				d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
 
-		for (int i = 0; i < 6; i++) {
-			numSquaresToOmit[i] = counters[i];
-		}
+				//Set the Input Layout
+				d3d11DevCon->IASetInputLayout(planetLayout);
 
+				UINT stride = sizeof(PlanetVertex);
+				UINT offset = 0;
 
-		for (int i = 0; i < 6; i++) {
-			for (int j = 0; j < numSquaresToOmit[i]; j++) {
-				for (int k = 0; k < numSquaresToOmit[i] - 1; k++) {
-
-					if (omitIndices[i][k] > omitIndices[i][k + 1]) {
-						UINT temp = omitIndices[i][k + 1];
-						omitIndices[i][k + 1] = omitIndices[i][k];
-						omitIndices[i][k] = temp;
-					}
-
-				}
-			}
-		}
-
-
-
-
-
-
-	}
-
-	void draw() {
-		//Set Vertex and Pixel Shaders
-		d3d11DevCon->VSSetShader(PLANET_VS, 0, 0);
-		d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
-
-		//Set the Input Layout
-		d3d11DevCon->IASetInputLayout(planetLayout);
-
-		d3d11DevCon->OMSetDepthStencilState(DSLessEqual, 0);
-
-		for (int i = 0; i < 6; i++) {
-			if (drawFace[i] == true) {
-				//Set the grounds index buffer
-				d3d11DevCon->IASetIndexBuffer(indexBuffer[i], DXGI_FORMAT_R32_UINT, 0);
-				//Set the grounds vertex buffer
-				UINT stride3 = sizeof(PlanetVertex);
-				UINT offset3 = 0;
-				d3d11DevCon->IASetVertexBuffers(0, 1, &vertBuffer[i], &stride3, &offset3);
+				d3d11DevCon->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+				d3d11DevCon->IASetVertexBuffers(0, 1, &vertBuffer, &stride, &offset);
 
 				//Set the WVP matrix and send it to the constant buffer in effect file
-				if (vLength(camToPlanet) > 10000000.0)
-					WVP = groundWorld * camView * planetCamProjection;
-				else
-					WVP = groundWorld * camView * planetCamProjectionSmall;
+				//WVP = groundWorld * camView * camProjection;
+				WVP = groundWorld * camView * planetCamProjection;
 				cbPerObj.WVP = XMMatrixTranspose(WVP);
 				cbPerObj.World = XMMatrixTranspose(groundWorld);
 				d3d11DevCon->UpdateSubresource(cbPerObjectBuffer, 0, NULL, &cbPerObj, 0, 0);
 				d3d11DevCon->VSSetConstantBuffers(0, 1, &cbPerObjectBuffer);
 				d3d11DevCon->PSSetShaderResources(0, 1, &texture[0]);
-				d3d11DevCon->PSSetShaderResources(1, 1, &texture[1]);
-				d3d11DevCon->PSSetShaderResources(2, 1, &texture[2]);
-				d3d11DevCon->PSSetShaderResources(3, 1, &texture[3]);
-				d3d11DevCon->PSSetShaderResources(4, 1, &texture[4]);
+				d3d11DevCon->PSSetShaderResources(1, 1, &texture[2]);
 				d3d11DevCon->PSSetSamplers(0, 1, &CubesTexSamplerState);
 
 				d3d11DevCon->RSSetState(RSCullNone);
-				if (numSquaresToOmit[i] == 0) {
-					d3d11DevCon->DrawIndexed(6 * LandChunkSize*LandChunkSize, 0, 0);
-				}
-				else {
-					for (int j = 0; j < numSquaresToOmit[i]; j++) { // number of squares to omit
-						if (j == 0)
-							d3d11DevCon->DrawIndexed(omitIndices[i][j], 0, 0);
-						else
-							d3d11DevCon->DrawIndexed(omitIndices[i][j] - (omitIndices[i][j-1]+5) - 1, (omitIndices[i][j-1]+5)+1, 0);
+				//d3d11DevCon->RSSetState(Wireframe);
+				d3d11DevCon->DrawIndexed(chunkLength*chunkLength * 6, 0, 0);
+			}
 
-						if (j == numSquaresToOmit[i]-1) { // last square to omit
-							d3d11DevCon->DrawIndexed(6 * 256 * 256 - omitIndices[i][j]+5, omitIndices[i][j] + 5 + 1, 0);
-						}
+			void cleanUp() {
+				vertBuffer->Release();
+				indexBuffer->Release();
+			}
+		}sideChunks[2048];
+
+		void create(double squarePos_y) {
+			squarePosY = squarePos_y;
+
+			for (int i = 0; i < 2048; i++) {
+				drawQuad[i] = false;
+				firstUpdate[i] = false;
+			}
+			drawQuad[0] = true;
+			firstUpdate[0] = true;
+
+			quadData[0] = quad(double3(0.0, squarePosY, 0.0), double3(0.0, squarePosY, 0.0), maxLength);
+			quadData[0].update();
+
+
+			for (int i = 0; i < 2048; i++)
+				sideChunks[i].create();
+		}
+
+		void update(double3 camPos) {
+			updateQuad();
+
+			double eyeRange = sqrt(positive(camPos.x*camPos.x + camPos.y*camPos.y + camPos.z*camPos.z - maxLength*maxLength))*1.05;
+			if (eyeRange < 8000.0)
+				eyeRange = 8000.0;
+
+
+
+
+			for (int i = 0; i < 2048; i++) {
+				if (drawQuad[i] == true) {
+					quadData[i].update();
+
+					if (firstUpdate[i] == true) {
+						sideChunks[i].firstCamPos = camPos;
+						sideChunks[i].updateChunkData(quadData[i]);
+
+						firstUpdate[i] = false;
 					}
+
+					sideChunks[i].update(camPos);
 				}
 			}
 		}
+
+		void draw() {
+			double eyeRange = sqrt(positive(camPos.x*camPos.x + camPos.y*camPos.y + camPos.z*camPos.z - maxLength*maxLength))*1.05;
+			if (eyeRange < 8000.0)
+				eyeRange = 8000.0;
+
+			for (int i = 0; i < 2048; i++) {
+				if (drawQuad[i] == true && quadData[i].distance < eyeRange) {
+					sideChunks[i].draw();
+				}
+			}
+		}
+
+		void cleanUp() {
+			for (int i = 0; i < 2048; i++)
+				sideChunks[i].cleanUp();
+		}
+
+	}sideY0, sideY1;
+
+
+	class sideX {
+		quad quadData[2048];
+		bool drawQuad[2048];
+		bool firstUpdate[2048];
+		int numInstances;
+
+	public:
+		double squarePosX;
+
+		void updateQuad() {
+
+			for (int i = 0; i < 2048; i++) {
+
+				if (drawQuad[i] == true) {
+
+					if (quadData[i].subdivide == true) {
+
+						drawQuad[i] = false;
+						quad temp = quadData[i];
+						counter = 0;
+
+						for (int j = 0; j < 2048; j++) {
+							if (counter == 0) {
+								if (drawQuad[j] == false) {
+									quadData[j].posSquare = double3(squarePosX, temp.posSquare.y - 0.5*temp.length, temp.posSquare.z - 0.5*temp.length);
+									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
+									
+									// Next apply height
+									double3 tempNormal = quadData[j].pos;
+
+									quadData[j].pos.x *= maxLength;
+									quadData[j].pos.y *= maxLength;
+									quadData[j].pos.z *= maxLength;
+									quadData[j].length = temp.length / 2.0;
+
+									terrainPoint.generateTerrainPoint(tempNormal);
+
+
+
+									quadData[j].pos.x += terrainPoint.terrain.x;
+									quadData[j].pos.y += terrainPoint.terrain.y;
+									quadData[j].pos.z += terrainPoint.terrain.z;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+									counter++;
+								}
+							}
+							else if (counter == 1) {
+								if (drawQuad[j] == false) {
+									quadData[j].posSquare = double3(squarePosX, temp.posSquare.y + 0.5*temp.length, temp.posSquare.z - 0.5*temp.length);
+									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
+
+									// Next apply height
+									double3 tempNormal = quadData[j].pos;
+
+									quadData[j].pos.x *= maxLength;
+									quadData[j].pos.y *= maxLength;
+									quadData[j].pos.z *= maxLength;
+									quadData[j].length = temp.length / 2.0;
+
+									terrainPoint.generateTerrainPoint(tempNormal);
+
+
+
+									quadData[j].pos.x += terrainPoint.terrain.x;
+									quadData[j].pos.y += terrainPoint.terrain.y;
+									quadData[j].pos.z += terrainPoint.terrain.z;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+									counter++;
+								}
+							}
+							else if (counter == 2) {
+								if (drawQuad[j] == false) {
+									quadData[j].posSquare = double3(squarePosX, temp.posSquare.y + 0.5*temp.length, temp.posSquare.z + 0.5*temp.length);
+									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
+
+									// Next apply height
+									double3 tempNormal = quadData[j].pos;
+
+									quadData[j].pos.x *= maxLength;
+									quadData[j].pos.y *= maxLength;
+									quadData[j].pos.z *= maxLength;
+									quadData[j].length = temp.length / 2.0;
+
+									terrainPoint.generateTerrainPoint(tempNormal);
+
+
+
+									quadData[j].pos.x += terrainPoint.terrain.x;
+									quadData[j].pos.y += terrainPoint.terrain.y;
+									quadData[j].pos.z += terrainPoint.terrain.z;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+									counter++;
+								}
+							}
+							else if (counter == 3) {
+								if (drawQuad[j] == false) {
+									quadData[j].posSquare = double3(squarePosX, temp.posSquare.y - 0.5*temp.length, temp.posSquare.z + 0.5*temp.length);
+									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
+
+									// Next apply height
+									double3 tempNormal = quadData[j].pos;
+
+									quadData[j].pos.x *= maxLength;
+									quadData[j].pos.y *= maxLength;
+									quadData[j].pos.z *= maxLength;
+									quadData[j].length = temp.length / 2.0;
+
+									terrainPoint.generateTerrainPoint(tempNormal);
+
+
+
+									quadData[j].pos.x += terrainPoint.terrain.x;
+									quadData[j].pos.y += terrainPoint.terrain.y;
+									quadData[j].pos.z += terrainPoint.terrain.z;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+									counter++;
+								}
+							}
+						}
+
+					}
+					if (quadData[i].combine == true) {
+
+						if (((quadData[i].posSquare.y - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0 == floor(((quadData[i].posSquare.y - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0)
+							&& ((quadData[i].posSquare.z - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0 == floor(((quadData[i].posSquare.z - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0)) {
+
+							drawQuad[i] = false;
+
+							for (int j = 0; j < 2048; j++) {
+								if (drawQuad[j] == true && quadData[j].length == quadData[i].length) {
+
+									if (quadData[i].posSquare.y + quadData[i].length * 2.0 == quadData[j].posSquare.y && quadData[i].posSquare.z == quadData[j].posSquare.z) {
+										quadData[j].combine = false;
+										drawQuad[j] = false;
+									}
+									else if (quadData[i].posSquare.y + quadData[i].length * 2.0 == quadData[j].posSquare.y && quadData[i].posSquare.z + quadData[i].length * 2.0 == quadData[j].posSquare.z) {
+										quadData[j].combine = false;
+										drawQuad[j] = false;
+									}
+									else if (quadData[i].posSquare.y == quadData[j].posSquare.y && quadData[i].posSquare.z + quadData[i].length * 2.0 == quadData[j].posSquare.z) {
+										quadData[j].combine = false;
+										drawQuad[j] = false;
+									}
+
+								}
+							}
+
+							quadData[i].posSquare.y += quadData[i].length;
+							quadData[i].posSquare.z += quadData[i].length;
+							quadData[i].pos = spherize(double3(quadData[i].posSquare.x / maxLength, quadData[i].posSquare.y / maxLength, quadData[i].posSquare.z / maxLength));
+
+							// Next apply height
+							double3 tempNormal = quadData[i].pos;
+
+							quadData[i].pos.x *= maxLength;
+							quadData[i].pos.y *= maxLength;
+							quadData[i].pos.z *= maxLength;
+
+							terrainPoint.generateTerrainPoint(tempNormal);
+
+
+
+							quadData[i].pos.x += terrainPoint.terrain.x;
+							quadData[i].pos.y += terrainPoint.terrain.y;
+							quadData[i].pos.z += terrainPoint.terrain.z;
+
+							quadData[i].length *= 2.0;
+
+							quadData[i].combine = false;
+							drawQuad[i] = true;
+							firstUpdate[i] = true;
+						}
+
+					}
+
+				}
+
+			}
+
+		}
+
+
+
+
+		class chunk {
+			ID3D11Buffer* indexBuffer;
+			ID3D11Buffer* vertBuffer;
+			XMMATRIX groundWorld;
+
+			PlanetVertex verticesInitial[(chunkLength + 1)*(chunkLength + 1)];
+			PlanetVertex verticesFinal[(chunkLength + 1)*(chunkLength + 1)];
+			DWORD indices[chunkLength*chunkLength * 6];
+
+			D3D11_BUFFER_DESC indexBufferDesc;
+			D3D11_SUBRESOURCE_DATA indexBufferData;
+			D3D11_BUFFER_DESC vertexBufferDesc;
+			D3D11_SUBRESOURCE_DATA initialVertexBufferData;
+			D3D11_MAPPED_SUBRESOURCE updatedVertexBufferData;
+
+		public:
+			double3 firstCamPos;
+
+			void create() {
+
+				counter = 0;
+				for (int z = 0; z < chunkLength + 1; z++) {
+					for (int x = 0; x < chunkLength + 1; x++) {
+						verticesInitial[counter] = PlanetVertex(0.0f, float(z - chunkLength / 2) / 16.0f, float(x - chunkLength / 2) / 16.0f, float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+						counter++;
+					}
+				}
+
+
+
+				counter = 0;
+
+				for (int x = 0; x < chunkLength; x++) {
+					for (int z = 0; z < chunkLength; z++) {
+						indices[counter] = x + z * (chunkLength + 1);
+						counter++;
+						indices[counter] = x + 1 + z * (chunkLength + 1);
+						counter++;
+						indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1);
+						counter++;
+						indices[counter] = x + z * (chunkLength + 1);
+						counter++;
+						indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1);
+						counter++;
+						indices[counter] = x + (chunkLength + 1) + z * (chunkLength + 1);
+						counter++;
+					}
+				}
+
+				ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
+
+				indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+				indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+				indexBufferDesc.CPUAccessFlags = 0;
+				indexBufferDesc.MiscFlags = 0;
+				indexBufferDesc.ByteWidth = sizeof(indices);
+
+				indexBufferData.pSysMem = indices;
+				d3d11Device->CreateBuffer(&indexBufferDesc, &indexBufferData, &indexBuffer);
+
+				ZeroMemory(&initialVertexBufferData, sizeof(initialVertexBufferData));
+				ZeroMemory(&vertexBufferDesc, sizeof(vertexBufferDesc));
+				ZeroMemory(&updatedVertexBufferData, sizeof(D3D11_MAPPED_SUBRESOURCE));
+
+				vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+				vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+				vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+				vertexBufferDesc.MiscFlags = 0;
+				vertexBufferDesc.ByteWidth = sizeof(verticesInitial);
+
+				initialVertexBufferData.pSysMem = verticesInitial;
+				hr = d3d11Device->CreateBuffer(&vertexBufferDesc, &initialVertexBufferData, &vertBuffer);
+			}
+
+			void update(double3 camPos) {
+				groundWorld = XMMatrixIdentity();
+				Scale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
+				Translation = XMMatrixTranslation(float(firstCamPos.x - camPos.x), float(firstCamPos.y - camPos.y), float(firstCamPos.z - camPos.z));
+				//Translation = XMMatrixTranslation(0.0f, -5.0f, 0.0f);
+				groundWorld = Scale * Translation;
+			}
+
+			double3 position[chunkLength + 1][chunkLength + 1];
+
+			void updateChunkData(quad chunkData) {
+				for (int z = 0; z < (chunkLength + 1); z++) {
+					for (int x = 0; x < (chunkLength + 1); x++) {
+						double3 temp = chunkData.posSquare;
+
+
+
+						temp.x = double(verticesInitial[z * (chunkLength + 1) + x].pos.x) * chunkData.length;
+						temp.y = double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * chunkData.length;
+						temp.z = double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * chunkData.length;
+
+						temp.x += chunkData.posSquare.x;
+						temp.y += chunkData.posSquare.y;
+						temp.z += chunkData.posSquare.z;
+
+						temp.x /= maxLength;
+						temp.y /= maxLength;
+						temp.z /= maxLength;
+
+						temp = spherize(temp);
+
+
+						double3 tempNormal = temp;
+
+						temp.x *= maxLength;
+						temp.y *= maxLength;
+						temp.z *= maxLength;
+
+						terrainPoint.generateTerrainPoint(tempNormal);
+
+						verticesFinal[z * (chunkLength + 1) + x].height = terrainPoint.height_f;
+						verticesFinal[z * (chunkLength + 1) + x].landTypeHeight = terrainPoint.landTypeHeight_f;
+
+						temp.x += terrainPoint.terrain.x;
+						temp.y += terrainPoint.terrain.y;
+						temp.z += terrainPoint.terrain.z;
+
+						temp.x = temp.x - firstCamPos.x;
+						temp.y = temp.y - firstCamPos.y;
+						temp.z = temp.z - firstCamPos.z;
+
+						position[x][z] = temp;
+
+						verticesFinal[z * (chunkLength + 1) + x].pos = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
+						verticesFinal[z * (chunkLength + 1) + x].texCoord = XMFLOAT2(float(double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * chunkData.length), float(double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * chunkData.length));
+					}
+				}
+				double3 V;
+				double3 W;
+				double3 f_normals[2][chunkLength][chunkLength];
+				double3 normals[chunkLength + 1][chunkLength + 1];
+
+				counter = 0;
+				for (int z = 0; z < chunkLength; z++) {
+					for (int x = 0; x < chunkLength; x++) {
+						for (int i = 0; i < 2; i++) {
+							if (i == 0) {
+								V.x = position[x + 1][z + 1].x - position[x][z].x;
+								V.y = position[x + 1][z + 1].y - position[x][z].y;
+								V.z = position[x + 1][z + 1].z - position[x][z].z;
+								W.x = position[x + 1][z].x - position[x][z].x;
+								W.y = position[x + 1][z].y - position[x][z].y;
+								W.z = position[x + 1][z].z - position[x][z].z;
+							}
+							if (i == 1) {
+								V.x = position[x + 1][z + 1].x - position[x][z].x;
+								V.y = position[x + 1][z + 1].y - position[x][z].y;
+								V.z = position[x + 1][z + 1].z - position[x][z].z;
+								W.x = position[x][z + 1].x - position[x][z].x;
+								W.y = position[x][z + 1].y - position[x][z].y;
+								W.z = position[x][z + 1].z - position[x][z].z;
+							}
+							f_normals[i][x][z].x = (V.y*W.z) - (V.z*W.y);
+							f_normals[i][x][z].y = (V.z*W.x) - (V.x*W.z);
+							f_normals[i][x][z].z = (V.x*W.y) - (V.y*W.x);
+							f_normals[i][x][z] = normalize(f_normals[i][x][z]);
+							if (chunkData.posSquare.x >= 0.0) {
+								if (f_normals[i][x][z].x < 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
+							}
+							else if (chunkData.posSquare.x < 0.0) {
+								if (f_normals[i][x][z].x > 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
+							}
+						}
+					}
+				}
+				//*
+				for (int z = 0; z < chunkLength + 1; z++) {
+					for (int x = 0; x < chunkLength + 1; x++) {
+						if (x != 0 && z != 0 && x != chunkLength && z != chunkLength) {
+							normals[x][z].x = ((f_normals[0][x - 1][z - 1].x + f_normals[1][x - 1][z - 1].x) / 2 + f_normals[0][x - 1][z].x + (f_normals[0][x][z].x + f_normals[1][x][z].x) / 2 + f_normals[1][x][z - 1].x) / 4;
+							normals[x][z].y = ((f_normals[0][x - 1][z - 1].y + f_normals[1][x - 1][z - 1].y) / 2 + f_normals[0][x - 1][z].y + (f_normals[0][x][z].y + f_normals[1][x][z].y) / 2 + f_normals[1][x][z - 1].y) / 4;
+							normals[x][z].z = ((f_normals[0][x - 1][z - 1].z + f_normals[1][x - 1][z - 1].z) / 2 + f_normals[0][x - 1][z].z + (f_normals[0][x][z].z + f_normals[1][x][z].z) / 2 + f_normals[1][x][z - 1].z) / 4;
+							normals[x][z] = normalize(normals[x][z]);
+						}
+						else if (x == chunkLength) {////////////CHANGE//////////////
+							normals[x][z].x = f_normals[0][x - 1][z].x + f_normals[1][x - 1][z].x;
+							normals[x][z].y = f_normals[0][x - 1][z].y + f_normals[1][x - 1][z].y;
+							normals[x][z].z = f_normals[0][x - 1][z].z + f_normals[1][x - 1][z].z;
+							normals[x][z] = normalize(normals[x][z]);
+						}
+						else if (z == chunkLength) {
+							normals[x][z].x = f_normals[0][x][z - 1].x + f_normals[1][x][z - 1].x;
+							normals[x][z].y = f_normals[0][x][z - 1].y + f_normals[1][x][z - 1].y;
+							normals[x][z].z = f_normals[0][x][z - 1].z + f_normals[1][x][z - 1].z;
+							normals[x][z] = normalize(normals[x][z]);
+						}
+						else {////////////CHANGE//////////////
+							normals[x][z].x = f_normals[0][x][z].x + f_normals[1][x][z].x;
+							normals[x][z].y = f_normals[0][x][z].y + f_normals[1][x][z].y;
+							normals[x][z].z = f_normals[0][x][z].z + f_normals[1][x][z].z;
+							normals[x][z] = normalize(normals[x][z]);
+						}
+						verticesFinal[z * (chunkLength + 1) + x].normal = XMFLOAT3(float(normals[x][z].x), float(normals[x][z].y), float(normals[x][z].z));
+					}
+				}
+
+
+				d3d11DevCon->Map(vertBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &updatedVertexBufferData);
+				memcpy(updatedVertexBufferData.pData, verticesFinal, sizeof(verticesFinal));
+				d3d11DevCon->Unmap(vertBuffer, 0);
+			}
+
+			void draw() {
+				//Set Vertex and Pixel Shaders
+				d3d11DevCon->VSSetShader(PLANET_VS, 0, 0);
+				d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
+
+				//Set the Input Layout
+				d3d11DevCon->IASetInputLayout(planetLayout);
+
+				UINT stride = sizeof(PlanetVertex);
+				UINT offset = 0;
+
+				d3d11DevCon->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+				d3d11DevCon->IASetVertexBuffers(0, 1, &vertBuffer, &stride, &offset);
+
+				//Set the WVP matrix and send it to the constant buffer in effect file
+				//WVP = groundWorld * camView * camProjection;
+				WVP = groundWorld * camView * planetCamProjection;
+				cbPerObj.WVP = XMMatrixTranspose(WVP);
+				cbPerObj.World = XMMatrixTranspose(groundWorld);
+				d3d11DevCon->UpdateSubresource(cbPerObjectBuffer, 0, NULL, &cbPerObj, 0, 0);
+				d3d11DevCon->VSSetConstantBuffers(0, 1, &cbPerObjectBuffer);
+				d3d11DevCon->PSSetShaderResources(0, 1, &texture[0]);
+				d3d11DevCon->PSSetShaderResources(1, 1, &texture[2]);
+				d3d11DevCon->PSSetSamplers(0, 1, &CubesTexSamplerState);
+
+				d3d11DevCon->RSSetState(RSCullNone);
+				//d3d11DevCon->RSSetState(Wireframe);
+				d3d11DevCon->DrawIndexed(chunkLength*chunkLength * 6, 0, 0);
+			}
+
+			void cleanUp() {
+				vertBuffer->Release();
+				indexBuffer->Release();
+			}
+		}sideChunks[2048];
+
+		void create(double squarePos_x) {
+			squarePosX = squarePos_x;
+
+			for (int i = 0; i < 2048; i++) {
+				drawQuad[i] = false;
+				firstUpdate[i] = false;
+			}
+			drawQuad[0] = true;
+			firstUpdate[0] = true;
+
+			quadData[0] = quad(double3(squarePosX, 0.0, 0.0), double3(squarePosX, 0.0, 0.0), maxLength);
+			quadData[0].update();
+
+
+			for (int i = 0; i < 2048; i++)
+				sideChunks[i].create();
+		}
+
+		void update(double3 camPos) {
+			updateQuad();
+
+			double eyeRange = sqrt(positive(camPos.x*camPos.x + camPos.y*camPos.y + camPos.z*camPos.z - maxLength*maxLength))*1.05;
+			if (eyeRange < 8000.0)
+				eyeRange = 8000.0;
+
+
+
+
+			for (int i = 0; i < 2048; i++) {
+				if (drawQuad[i] == true) {
+					quadData[i].update();
+
+					if (firstUpdate[i] == true) {
+						sideChunks[i].firstCamPos = camPos;
+						sideChunks[i].updateChunkData(quadData[i]);
+
+						firstUpdate[i] = false;
+					}
+
+					sideChunks[i].update(camPos);
+				}
+			}
+		}
+
+		void draw() {
+			double eyeRange = sqrt(positive(camPos.x*camPos.x + camPos.y*camPos.y + camPos.z*camPos.z - maxLength*maxLength))*1.05;
+			if (eyeRange < 8000.0)
+				eyeRange = 8000.0;
+
+			for (int i = 0; i < 2048; i++) {
+				if (drawQuad[i] == true && quadData[i].distance < eyeRange) {
+					sideChunks[i].draw();
+				}
+			}
+		}
+
+		void cleanUp() {
+			for (int i = 0; i < 2048; i++)
+				sideChunks[i].cleanUp();
+		}
+
+	}sideX0, sideX1;
+
+
+	class sideZ {
+		quad quadData[2048];
+		bool drawQuad[2048];
+		bool firstUpdate[2048];
+		int numInstances;
+
+	public:
+		double squarePosZ;
+
+		void updateQuad() {
+
+			for (int i = 0; i < 2048; i++) {
+
+				if (drawQuad[i] == true) {
+
+					if (quadData[i].subdivide == true) {
+
+						drawQuad[i] = false;
+						quad temp = quadData[i];
+						counter = 0;
+
+						for (int j = 0; j < 2048; j++) {
+							if (counter == 0) {
+								if (drawQuad[j] == false) {
+									quadData[j].posSquare = double3(temp.posSquare.x - 0.5*temp.length, temp.posSquare.y - 0.5*temp.length, squarePosZ);
+									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
+
+									// Next apply height
+									double3 tempNormal = quadData[j].pos;
+
+									quadData[j].pos.x *= maxLength;
+									quadData[j].pos.y *= maxLength;
+									quadData[j].pos.z *= maxLength;
+									quadData[j].length = temp.length / 2.0;
+
+									terrainPoint.generateTerrainPoint(tempNormal);
+
+
+
+									quadData[j].pos.x += terrainPoint.terrain.x;
+									quadData[j].pos.y += terrainPoint.terrain.y;
+									quadData[j].pos.z += terrainPoint.terrain.z;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+									counter++;
+								}
+							}
+							else if (counter == 1) {
+								if (drawQuad[j] == false) {
+									quadData[j].posSquare = double3(temp.posSquare.x + 0.5*temp.length, temp.posSquare.y - 0.5*temp.length, squarePosZ);
+									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
+
+									// Next apply height
+									double3 tempNormal = quadData[j].pos;
+
+									quadData[j].pos.x *= maxLength;
+									quadData[j].pos.y *= maxLength;
+									quadData[j].pos.z *= maxLength;
+									quadData[j].length = temp.length / 2.0;
+
+									terrainPoint.generateTerrainPoint(tempNormal);
+
+
+
+									quadData[j].pos.x += terrainPoint.terrain.x;
+									quadData[j].pos.y += terrainPoint.terrain.y;
+									quadData[j].pos.z += terrainPoint.terrain.z;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+									counter++;
+								}
+							}
+							else if (counter == 2) {
+								if (drawQuad[j] == false) {
+									quadData[j].posSquare = double3(temp.posSquare.x + 0.5*temp.length, temp.posSquare.y + 0.5*temp.length, squarePosZ);
+									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
+
+									// Next apply height
+									double3 tempNormal = quadData[j].pos;
+
+									quadData[j].pos.x *= maxLength;
+									quadData[j].pos.y *= maxLength;
+									quadData[j].pos.z *= maxLength;
+									quadData[j].length = temp.length / 2.0;
+
+									terrainPoint.generateTerrainPoint(tempNormal);
+
+
+
+									quadData[j].pos.x += terrainPoint.terrain.x;
+									quadData[j].pos.y += terrainPoint.terrain.y;
+									quadData[j].pos.z += terrainPoint.terrain.z;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+									counter++;
+								}
+							}
+							else if (counter == 3) {
+								if (drawQuad[j] == false) {
+									quadData[j].posSquare = double3(temp.posSquare.x - 0.5*temp.length, temp.posSquare.y + 0.5*temp.length, squarePosZ);
+									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
+
+									// Next apply height
+									double3 tempNormal = quadData[j].pos;
+
+									quadData[j].pos.x *= maxLength;
+									quadData[j].pos.y *= maxLength;
+									quadData[j].pos.z *= maxLength;
+									quadData[j].length = temp.length / 2.0;
+
+									terrainPoint.generateTerrainPoint(tempNormal);
+
+
+
+									quadData[j].pos.x += terrainPoint.terrain.x;
+									quadData[j].pos.y += terrainPoint.terrain.y;
+									quadData[j].pos.z += terrainPoint.terrain.z;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+
+									quadData[j].subdivide = false;
+									drawQuad[j] = true;
+									firstUpdate[j] = true;
+									counter++;
+								}
+							}
+						}
+
+					}
+					if (quadData[i].combine == true) {
+
+						if (((quadData[i].posSquare.x - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0 == floor(((quadData[i].posSquare.x - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0)
+							&& ((quadData[i].posSquare.y - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0 == floor(((quadData[i].posSquare.y - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0)) {
+
+							drawQuad[i] = false;
+
+							for (int j = 0; j < 2048; j++) {
+								if (drawQuad[j] == true && quadData[j].length == quadData[i].length) {
+
+									if (quadData[i].posSquare.x + quadData[i].length * 2.0 == quadData[j].posSquare.x && quadData[i].posSquare.y == quadData[j].posSquare.y) {
+										quadData[j].combine = false;
+										drawQuad[j] = false;
+									}
+									else if (quadData[i].posSquare.x + quadData[i].length * 2.0 == quadData[j].posSquare.x && quadData[i].posSquare.y + quadData[i].length * 2.0 == quadData[j].posSquare.y) {
+										quadData[j].combine = false;
+										drawQuad[j] = false;
+									}
+									else if (quadData[i].posSquare.x == quadData[j].posSquare.x && quadData[i].posSquare.y + quadData[i].length * 2.0 == quadData[j].posSquare.y) {
+										quadData[j].combine = false;
+										drawQuad[j] = false;
+									}
+
+								}
+							}
+
+							quadData[i].posSquare.x += quadData[i].length;
+							quadData[i].posSquare.y += quadData[i].length;
+							quadData[i].pos = spherize(double3(quadData[i].posSquare.x / maxLength, quadData[i].posSquare.y / maxLength, quadData[i].posSquare.z / maxLength));
+
+							// Next apply height
+							double3 tempNormal = quadData[i].pos;
+
+							quadData[i].pos.x *= maxLength;
+							quadData[i].pos.y *= maxLength;
+							quadData[i].pos.z *= maxLength;
+
+							terrainPoint.generateTerrainPoint(tempNormal);
+
+
+
+							quadData[i].pos.x += terrainPoint.terrain.x;
+							quadData[i].pos.y += terrainPoint.terrain.y;
+							quadData[i].pos.z += terrainPoint.terrain.z;
+
+							quadData[i].length *= 2.0;
+
+							quadData[i].combine = false;
+							drawQuad[i] = true;
+							firstUpdate[i] = true;
+						}
+
+					}
+
+				}
+
+			}
+
+		}
+
+
+
+
+		class chunk {
+			ID3D11Buffer* indexBuffer;
+			ID3D11Buffer* vertBuffer;
+			XMMATRIX groundWorld;
+
+			PlanetVertex verticesInitial[(chunkLength + 1)*(chunkLength + 1)];
+			PlanetVertex verticesFinal[(chunkLength + 1)*(chunkLength + 1)];
+			DWORD indices[chunkLength*chunkLength * 6];
+
+			D3D11_BUFFER_DESC indexBufferDesc;
+			D3D11_SUBRESOURCE_DATA indexBufferData;
+			D3D11_BUFFER_DESC vertexBufferDesc;
+			D3D11_SUBRESOURCE_DATA initialVertexBufferData;
+			D3D11_MAPPED_SUBRESOURCE updatedVertexBufferData;
+
+		public:
+			double3 firstCamPos;
+
+			void create() {
+
+				counter = 0;
+				for (int z = 0; z < chunkLength + 1; z++) {
+					for (int x = 0; x < chunkLength + 1; x++) {
+						verticesInitial[counter] = PlanetVertex(float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 0.0f, float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
+						counter++;
+					}
+				}
+
+
+
+				counter = 0;
+
+				for (int x = 0; x < chunkLength; x++) {
+					for (int z = 0; z < chunkLength; z++) {
+						indices[counter] = x + z * (chunkLength + 1);
+						counter++;
+						indices[counter] = x + 1 + z * (chunkLength + 1);
+						counter++;
+						indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1);
+						counter++;
+						indices[counter] = x + z * (chunkLength + 1);
+						counter++;
+						indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1);
+						counter++;
+						indices[counter] = x + (chunkLength + 1) + z * (chunkLength + 1);
+						counter++;
+					}
+				}
+
+				ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
+
+				indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+				indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+				indexBufferDesc.CPUAccessFlags = 0;
+				indexBufferDesc.MiscFlags = 0;
+				indexBufferDesc.ByteWidth = sizeof(indices);
+
+				indexBufferData.pSysMem = indices;
+				d3d11Device->CreateBuffer(&indexBufferDesc, &indexBufferData, &indexBuffer);
+
+				ZeroMemory(&initialVertexBufferData, sizeof(initialVertexBufferData));
+				ZeroMemory(&vertexBufferDesc, sizeof(vertexBufferDesc));
+				ZeroMemory(&updatedVertexBufferData, sizeof(D3D11_MAPPED_SUBRESOURCE));
+
+				vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+				vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+				vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+				vertexBufferDesc.MiscFlags = 0;
+				vertexBufferDesc.ByteWidth = sizeof(verticesInitial);
+
+				initialVertexBufferData.pSysMem = verticesInitial;
+				hr = d3d11Device->CreateBuffer(&vertexBufferDesc, &initialVertexBufferData, &vertBuffer);
+			}
+
+			void update(double3 camPos) {
+				groundWorld = XMMatrixIdentity();
+				Scale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
+				Translation = XMMatrixTranslation(float(firstCamPos.x - camPos.x), float(firstCamPos.y - camPos.y), float(firstCamPos.z - camPos.z));
+				//Translation = XMMatrixTranslation(0.0f, -5.0f, 0.0f);
+				groundWorld = Scale * Translation;
+			}
+
+			double3 position[chunkLength + 1][chunkLength + 1];
+
+			void updateChunkData(quad chunkData) {
+				for (int z = 0; z < (chunkLength + 1); z++) {
+					for (int x = 0; x < (chunkLength + 1); x++) {
+						double3 temp = chunkData.posSquare;
+
+
+
+						temp.x = double(verticesInitial[z * (chunkLength + 1) + x].pos.x) * chunkData.length;
+						temp.y = double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * chunkData.length;
+						temp.z = double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * chunkData.length;
+
+						temp.x += chunkData.posSquare.x;
+						temp.y += chunkData.posSquare.y;
+						temp.z += chunkData.posSquare.z;
+
+						temp.x /= maxLength;
+						temp.y /= maxLength;
+						temp.z /= maxLength;
+
+						temp = spherize(temp);
+
+
+						double3 tempNormal = temp;
+
+						temp.x *= maxLength;
+						temp.y *= maxLength;
+						temp.z *= maxLength;
+
+						terrainPoint.generateTerrainPoint(tempNormal);
+
+						verticesFinal[z * (chunkLength + 1) + x].height = terrainPoint.height_f;
+						verticesFinal[z * (chunkLength + 1) + x].landTypeHeight = terrainPoint.landTypeHeight_f;
+
+						temp.x += terrainPoint.terrain.x;
+						temp.y += terrainPoint.terrain.y;
+						temp.z += terrainPoint.terrain.z;
+
+						temp.x = temp.x - firstCamPos.x;
+						temp.y = temp.y - firstCamPos.y;
+						temp.z = temp.z - firstCamPos.z;
+
+						position[x][z] = temp;
+
+						verticesFinal[z * (chunkLength + 1) + x].pos = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
+						verticesFinal[z * (chunkLength + 1) + x].texCoord = XMFLOAT2(float(double(verticesInitial[z * (chunkLength + 1) + x].pos.x) * chunkData.length), float(double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * chunkData.length));
+					}
+				}
+
+				double3 V;
+				double3 W;
+				double3 f_normals[2][chunkLength][chunkLength];
+				double3 normals[chunkLength + 1][chunkLength + 1];
+
+				counter = 0;
+				for (int z = 0; z < chunkLength; z++) {
+					for (int x = 0; x < chunkLength; x++) {
+						for (int i = 0; i < 2; i++) {
+							if (i == 0) {
+								V.x = position[x + 1][z + 1].x - position[x][z].x;
+								V.y = position[x + 1][z + 1].y - position[x][z].y;
+								V.z = position[x + 1][z + 1].z - position[x][z].z;
+								W.x = position[x + 1][z].x - position[x][z].x;
+								W.y = position[x + 1][z].y - position[x][z].y;
+								W.z = position[x + 1][z].z - position[x][z].z;
+							}
+							if (i == 1) {
+								V.x = position[x + 1][z + 1].x - position[x][z].x;
+								V.y = position[x + 1][z + 1].y - position[x][z].y;
+								V.z = position[x + 1][z + 1].z - position[x][z].z;
+								W.x = position[x][z + 1].x - position[x][z].x;
+								W.y = position[x][z + 1].y - position[x][z].y;
+								W.z = position[x][z + 1].z - position[x][z].z;
+							}
+							f_normals[i][x][z].x = (V.y*W.z) - (V.z*W.y);
+							f_normals[i][x][z].y = (V.z*W.x) - (V.x*W.z);
+							f_normals[i][x][z].z = (V.x*W.y) - (V.y*W.x);
+							f_normals[i][x][z] = normalize(f_normals[i][x][z]);
+							if (chunkData.posSquare.z >= 0.0) {
+								if (f_normals[i][x][z].z < 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
+							}
+							else if (chunkData.posSquare.z < 0.0) {
+								if (f_normals[i][x][z].z > 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
+							}
+						}
+					}
+				}
+				//*
+				for (int z = 0; z < chunkLength + 1; z++) {
+					for (int x = 0; x < chunkLength + 1; x++) {
+						if (x != 0 && z != 0 && x != chunkLength && z != chunkLength) {
+							normals[x][z].x = ((f_normals[0][x - 1][z - 1].x + f_normals[1][x - 1][z - 1].x) / 2 + f_normals[0][x - 1][z].x + (f_normals[0][x][z].x + f_normals[1][x][z].x) / 2 + f_normals[1][x][z - 1].x) / 4;
+							normals[x][z].y = ((f_normals[0][x - 1][z - 1].y + f_normals[1][x - 1][z - 1].y) / 2 + f_normals[0][x - 1][z].y + (f_normals[0][x][z].y + f_normals[1][x][z].y) / 2 + f_normals[1][x][z - 1].y) / 4;
+							normals[x][z].z = ((f_normals[0][x - 1][z - 1].z + f_normals[1][x - 1][z - 1].z) / 2 + f_normals[0][x - 1][z].z + (f_normals[0][x][z].z + f_normals[1][x][z].z) / 2 + f_normals[1][x][z - 1].z) / 4;
+							normals[x][z] = normalize(normals[x][z]);
+						}
+						else if (x == chunkLength) {////////////CHANGE//////////////
+							normals[x][z].x = f_normals[0][x - 1][z].x + f_normals[1][x - 1][z].x;
+							normals[x][z].y = f_normals[0][x - 1][z].y + f_normals[1][x - 1][z].y;
+							normals[x][z].z = f_normals[0][x - 1][z].z + f_normals[1][x - 1][z].z;
+							normals[x][z] = normalize(normals[x][z]);
+						}
+						else if (z == chunkLength) {
+							normals[x][z].x = f_normals[0][x][z - 1].x + f_normals[1][x][z - 1].x;
+							normals[x][z].y = f_normals[0][x][z - 1].y + f_normals[1][x][z - 1].y;
+							normals[x][z].z = f_normals[0][x][z - 1].z + f_normals[1][x][z - 1].z;
+							normals[x][z] = normalize(normals[x][z]);
+						}
+						else {////////////CHANGE//////////////
+							normals[x][z].x = f_normals[0][x][z].x + f_normals[1][x][z].x;
+							normals[x][z].y = f_normals[0][x][z].y + f_normals[1][x][z].y;
+							normals[x][z].z = f_normals[0][x][z].z + f_normals[1][x][z].z;
+							normals[x][z] = normalize(normals[x][z]);
+						}
+						verticesFinal[z * (chunkLength + 1) + x].normal = XMFLOAT3(float(normals[x][z].x), float(normals[x][z].y), float(normals[x][z].z));
+					}
+				}
+
+				d3d11DevCon->Map(vertBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &updatedVertexBufferData);
+				memcpy(updatedVertexBufferData.pData, verticesFinal, sizeof(verticesFinal));
+				d3d11DevCon->Unmap(vertBuffer, 0);
+			}
+
+			void draw() {
+				//Set Vertex and Pixel Shaders
+				d3d11DevCon->VSSetShader(PLANET_VS, 0, 0);
+				d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
+
+				//Set the Input Layout
+				d3d11DevCon->IASetInputLayout(planetLayout);
+
+				UINT stride = sizeof(PlanetVertex);
+				UINT offset = 0;
+
+				d3d11DevCon->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+				d3d11DevCon->IASetVertexBuffers(0, 1, &vertBuffer, &stride, &offset);
+
+				//Set the WVP matrix and send it to the constant buffer in effect file
+				//WVP = groundWorld * camView * camProjection;
+				WVP = groundWorld * camView * planetCamProjection;
+				cbPerObj.WVP = XMMatrixTranspose(WVP);
+				cbPerObj.World = XMMatrixTranspose(groundWorld);
+				d3d11DevCon->UpdateSubresource(cbPerObjectBuffer, 0, NULL, &cbPerObj, 0, 0);
+				d3d11DevCon->VSSetConstantBuffers(0, 1, &cbPerObjectBuffer);
+				d3d11DevCon->PSSetShaderResources(0, 1, &texture[0]);
+				d3d11DevCon->PSSetShaderResources(1, 1, &texture[2]);
+				d3d11DevCon->PSSetSamplers(0, 1, &CubesTexSamplerState);
+
+				d3d11DevCon->RSSetState(RSCullNone);
+				//d3d11DevCon->RSSetState(Wireframe);
+				d3d11DevCon->DrawIndexed(chunkLength*chunkLength * 6, 0, 0);
+			}
+
+			void cleanUp() {
+				vertBuffer->Release();
+				indexBuffer->Release();
+			}
+		}sideChunks[2048];
+
+		void create(double squarePos_z) {
+			squarePosZ = squarePos_z;
+
+			for (int i = 0; i < 2048; i++) {
+				drawQuad[i] = false;
+				firstUpdate[i] = false;
+			}
+			drawQuad[0] = true;
+			firstUpdate[0] = true;
+
+			quadData[0] = quad(double3(0.0, 0.0, squarePosZ), double3(0.0, 0.0, squarePosZ), maxLength);
+			quadData[0].update();
+
+
+			for (int i = 0; i < 2048; i++)
+				sideChunks[i].create();
+		}
+
+		void update(double3 camPos) {
+			updateQuad();
+
+			double eyeRange = sqrt(positive(camPos.x*camPos.x + camPos.y*camPos.y + camPos.z*camPos.z - maxLength*maxLength))*1.05;
+			if (eyeRange < 8000.0)
+				eyeRange = 8000.0;
+
+
+
+
+			for (int i = 0; i < 2048; i++) {
+				if (drawQuad[i] == true) {
+					quadData[i].update();
+
+					if (firstUpdate[i] == true) {
+						sideChunks[i].firstCamPos = camPos;
+						sideChunks[i].updateChunkData(quadData[i]);
+
+						firstUpdate[i] = false;
+					}
+
+					sideChunks[i].update(camPos);
+				}
+			}
+		}
+
+		void draw() {
+			double eyeRange = sqrt(positive(camPos.x*camPos.x + camPos.y*camPos.y + camPos.z*camPos.z - maxLength*maxLength))*1.05;
+			if (eyeRange < 8000.0)
+				eyeRange = 8000.0;
+
+			for (int i = 0; i < 2048; i++) {
+				if (drawQuad[i] == true && quadData[i].distance < eyeRange) {
+					sideChunks[i].draw();
+				}
+			}
+		}
+
+		void cleanUp() {
+			for (int i = 0; i < 2048; i++)
+				sideChunks[i].cleanUp();
+		}
+
+	}sideZ0, sideZ1;
+
+
+public:
+
+	void init() {
+		sideY0.create(-maxLength);
+		sideY1.create(maxLength);
+		sideX0.create(-maxLength);
+		sideX1.create(maxLength);
+		sideZ0.create(-maxLength);
+		sideZ1.create(maxLength);
+	}
+
+	void update() {
+		sideY0.update(camPos);
+		sideY1.update(camPos);
+		sideX0.update(camPos);
+		sideX1.update(camPos);
+		sideZ0.update(camPos);
+		sideZ1.update(camPos);
+	}
+
+	void draw() {
+		sideY0.draw();
+		sideY1.draw();
+		sideX0.draw();
+		sideX1.draw();
+		sideZ0.draw();
+		sideZ1.draw();
 	}
 
 	void cleanUp() {
-		for (int i = 0; i < 6; i++) {
-			vertBuffer[i]->Release();
-			indexBuffer[i]->Release();
-		}
+		sideY0.cleanUp();
+		sideY1.cleanUp();
+		sideX0.cleanUp();
+		sideX1.cleanUp();
+		sideZ0.cleanUp();
+		sideZ1.cleanUp();
 	}
-}planet1;
-
+}planet;
 
 #endif
+
