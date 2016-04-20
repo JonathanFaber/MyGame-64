@@ -602,10 +602,19 @@ class Planet {
 							f_normals[i][x][z].y = (V.z*W.x) - (V.x*W.z);
 							f_normals[i][x][z].z = (V.x*W.y) - (V.y*W.x);
 							f_normals[i][x][z] = normalize(f_normals[i][x][z]);
-							if (f_normals[i][x][z].y < 0.0) {
-								f_normals[i][x][z].x *= -1;
-								f_normals[i][x][z].y *= -1;
-								f_normals[i][x][z].z *= -1;
+							if (chunkData.posSquare.y >= 0.0) {
+								if (f_normals[i][x][z].y < 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
+							}
+							else if (chunkData.posSquare.y < 0.0) {
+								if (f_normals[i][x][z].y > 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
 							}
 						}
 					}
@@ -1142,10 +1151,19 @@ class Planet {
 							f_normals[i][x][z].y = (V.z*W.x) - (V.x*W.z);
 							f_normals[i][x][z].z = (V.x*W.y) - (V.y*W.x);
 							f_normals[i][x][z] = normalize(f_normals[i][x][z]);
-							if (f_normals[i][x][z].x < 0.0) {
-								f_normals[i][x][z].x *= -1;
-								f_normals[i][x][z].y *= -1;
-								f_normals[i][x][z].z *= -1;
+							if (chunkData.posSquare.x >= 0.0) {
+								if (f_normals[i][x][z].x < 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
+							}
+							else if (chunkData.posSquare.x < 0.0) {
+								if (f_normals[i][x][z].x > 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
 							}
 						}
 					}
@@ -1660,10 +1678,19 @@ class Planet {
 							f_normals[i][x][z].y = (V.z*W.x) - (V.x*W.z);
 							f_normals[i][x][z].z = (V.x*W.y) - (V.y*W.x);
 							f_normals[i][x][z] = normalize(f_normals[i][x][z]);
-							if (f_normals[i][x][z].z < 0.0) {
-								f_normals[i][x][z].x *= -1;
-								f_normals[i][x][z].y *= -1;
-								f_normals[i][x][z].z *= -1;
+							if (chunkData.posSquare.z >= 0.0) {
+								if (f_normals[i][x][z].z < 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
+							}
+							else if (chunkData.posSquare.z < 0.0) {
+								if (f_normals[i][x][z].z > 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
 							}
 						}
 					}
