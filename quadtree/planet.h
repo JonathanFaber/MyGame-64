@@ -14,6 +14,9 @@ public:
 	double3 tempNormal;
 	double height;
 	float height_f;
+	double landHeight;
+	double temperatureHeight;
+	double moistureHeight;
 	double height1;
 	double landTypeHeight;
 	float landTypeHeight_f;
@@ -25,6 +28,7 @@ public:
 	double lacunarity;
 	double persistence;
 	double3 terrain;
+	double noise[28];
 
 	// change because it sucks
 	void generateTerrainPoint(double3 pos) {
@@ -36,112 +40,92 @@ public:
 
 		height = 0.0;
 		height_f = 0.0f;
+		landHeight = 0.0;
 		height1 = 0.0;
 		landTypeHeight = 0.0;
 		landTypeHeight_f = 0.0f;
 		amplitude;
 		maxAmplitude = 0.0;
 		maxAmplitude1 = 0.0;
-		noiseInput[3];
 		freq;
 		lacunarity = 2.0;
 		persistence = 0.5;
 
-		amplitude = 1.0;
-		freq = 64.0;
-		for (int k = 0; k < 4; k++) {
-			//if (j == 12)
-			//	amplitude *= 8.0;
-			//if (j == 14)
-			//	amplitude /= 8.0;
+		maxAmplitude = 0.0;
+		amplitude = 5000.0;
+		freq = 1.0;
+		for (int k = 0; k < 28; k++) {
 			noiseInput[0] = pos.x / maxLength * freq;
 			noiseInput[1] = pos.y / maxLength * freq;
 			noiseInput[2] = pos.z / maxLength * freq;
-			landTypeHeight += ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2]))) * amplitude;
+
+			noise[k] = ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])));
+
+			freq *= lacunarity;
+		}
+
+		maxAmplitude = 0.0;
+		amplitude = 5000.0;
+		persistence = 0.5;
+		for (int k = 6; k < 28; k++) {
+			if (k == 0 || k == 3) {
+				temperatureHeight += ((noise[k])) * amplitude;
+			}
+			else {
+				temperatureHeight += ((noise[k])) * amplitude;
+			}
+			maxAmplitude += amplitude;
+			amplitude *= persistence;
+		}
+
+		temperatureHeight /= maxAmplitude;
+
+
+		maxAmplitude = 0.0;
+		amplitude = 5000.0;
+		persistence = 0.5;
+		for (int k = 0; k < 22; k++) {
+			if (k == 0 || k == 3) {
+				landHeight += ((noise[k])) * amplitude;
+			}
+			else {
+				landHeight += ((noise[k])) * amplitude;
+			}
+			maxAmplitude += amplitude;
+			amplitude *= persistence;
+		}
+
+		landHeight /= maxAmplitude;
+
+		landHeight -= 0.15; // because planet is closer to 75 % water
+
+		height_f = float(landHeight);
+		/*
+		maxAmplitude = 0.0;
+		amplitude = 5000.0;
+		freq = 1.0;
+		for (int k = 0; k < 22; k++) {
+			if (k == 9) {
+				//freq *= 4.0;
+				amplitude *= 4.0;
+			}
+			noiseInput[0] = pos.x / maxLength * freq;
+			noiseInput[1] = pos.y / maxLength * freq;
+			noiseInput[2] = pos.z / maxLength * freq;
+
+			height += ((noise[k])) * amplitude;
 			//height += cos(noiseInput[0] + ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])))) * amplitude;
 			maxAmplitude += amplitude;
 			freq *= lacunarity;
 			amplitude *= persistence;
 		}
 
-		landTypeHeight_f = float(landTypeHeight);
+		height /= maxAmplitude;
 
+		height -= 0.15; // because planet is closer to 75 % water
 
-
-		if (landTypeHeight <= -0.5) {
-			maxAmplitude = 0.0;
-			amplitude = 5000.0;
-			freq = 1.0;
-			for (int k = 0; k < 18; k++) {
-				if (k == 9) {
-					//freq *= 4.0;
-					amplitude *= 64.0;
-				}
-				noiseInput[0] = pos.x / maxLength * freq;
-				noiseInput[1] = pos.y / maxLength * freq;
-				noiseInput[2] = pos.z / maxLength * freq;
-				height += ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2]))) * amplitude;
-				//height += cos(noiseInput[0] + ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])))) * amplitude;
-				maxAmplitude += amplitude;
-				freq *= lacunarity;
-				amplitude *= persistence;
-			}
-
-			height /= maxAmplitude;
-
-			height -= 0.15; // because planet is closer to 75 % water
-
-			height_f = float(height);
-		}
-		else if (landTypeHeight <= 0.75) {
-			maxAmplitude = 0.0;
-			amplitude = 5000.0;
-			freq = 1.0;
-			for (int k = 0; k < 22; k++) {
-				if (k == 14) {
-					//freq *= 4.0;
-					amplitude *= 16.0;
-				}
-				noiseInput[0] = pos.x / maxLength * freq;
-				noiseInput[1] = pos.y / maxLength * freq;
-				noiseInput[2] = pos.z / maxLength * freq;
-				height += ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2]))) * amplitude;
-				//height += cos(noiseInput[0] + ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])))) * amplitude;
-				maxAmplitude += amplitude;
-				freq *= lacunarity;
-				amplitude *= persistence;
-			}
-
-			height /= maxAmplitude;
-
-			height -= 0.15; // because planet is closer to 75 % water
-
-			height_f = float(height);
-		}
-		else {
-			maxAmplitude = 0.0;
-			amplitude = 5000.0;
-			freq = 64.0;
-			for (int k = 0; k < 22; k++) {
-				//if (k == 18)
-				//	amplitude *= 16.0;
-				noiseInput[0] = pos.x / maxLength * freq;
-				noiseInput[1] = pos.y / maxLength * freq;
-				noiseInput[2] = pos.z / maxLength * freq;
-				height += ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2]))) * amplitude;
-				//height += cos(noiseInput[0] + ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])))) * amplitude;
-				maxAmplitude += amplitude;
-				freq *= lacunarity;
-				amplitude *= persistence;
-			}
-
-			height /= maxAmplitude;
-
-			height -= 0.15; // because planet is closer to 75 % water
-
-			height_f = float(height);
-		}
-
+		height_f = float(height);
+		*/
 		if (height <= 0.0)
 			height = 0.0;
 
