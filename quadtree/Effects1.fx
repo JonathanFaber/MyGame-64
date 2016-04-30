@@ -303,12 +303,12 @@ float4 PLANET_PS(PLANET_VS_OUTPUT input) : SV_TARGET
 	//diffuse = ObjTexture[0].Sample( ObjSamplerState, input.TexCoord );
 	//diffuse = float4(0.0f, 1.0f, 0.0f, 1.0f);
 
-	if (input.height <= 0.0f)
+	if (input.height <= 0.0f)						// water
 		diffuse = float4(0.0f, 0.0f, 1.0f, 1.0f);
-	else if (input.landTypeHeight <= 0.75f)
-		diffuse = ObjTexture[0].Sample(ObjSamplerState, input.TexCoord);
-	else
+	else if (input.landTypeHeight <= 0.0f)			// hills
 		diffuse = ObjTexture[1].Sample(ObjSamplerState, input.TexCoord);
+	else											// plains
+		diffuse = ObjTexture[0].Sample(ObjSamplerState, input.TexCoord);
 
 	//else if (input.height <= 0.0001f)
 	//	diffuse = float4(1.0f, 1.0f, 0.0f, 1.0f); // yellow sand
