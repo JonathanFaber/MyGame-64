@@ -115,8 +115,8 @@ public:
 				amplitude = 5000.0;
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
-					if (k >= 6 && k <= 18)
-						height += ((noise[k])) * amplitude * 50.0;
+					if (k == 6)
+						amplitude *= 50.0;
 					else
 						height += ((noise[k])) * amplitude;
 					maxAmplitude1 += amplitude;
@@ -124,7 +124,7 @@ public:
 				}
 
 				height /= maxAmplitude1;
-				height -= 0.15;
+				//height += 0.15;
 				height *= maxAmplitude1;
 			}
 		}
@@ -152,8 +152,8 @@ public:
 				amplitude = 5000.0;
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
-					if (k >= 6 && k <= 18)
-						height += ((noise[k])) * amplitude * 50.0;
+					if (k == 6)
+						amplitude *= 50.0;
 					else
 						height += ((noise[k])) * amplitude;
 					maxAmplitude1 += amplitude;
@@ -162,7 +162,7 @@ public:
 
 				//height1 += landHeight * maxAmplitude;
 				height1 /= maxAmplitude1;
-				height1 -= 0.15;
+				//height1 += 0.15;
 				height = ((landHeight) * 10000 * height1 * maxAmplitude1) + (1.0 - ((landHeight) * 10000)) * landHeight * maxAmplitude;
 			}
 		}
