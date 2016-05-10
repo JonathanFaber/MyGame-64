@@ -35,6 +35,7 @@ double z_vel = 0.0;
 
 double playerVelocity;
 double speed = 1000000.0;
+double maxSpeed = 200.0;
 double speedTime;
 double maxspeedTime;
 bool onlyForward;
@@ -91,6 +92,14 @@ void DetectMouseInput()
 				camPitch += mouseCurrState.lY * 0.002;
 
 				speed *= pow(2, mouseCurrState.lZ * 0.002);
+
+				//if (maxSpeed > 10.0)
+				//	maxSpeed = (vLength(camPos) - 4194304.0)/4;
+				//else if (maxSpeed < 10.0)
+				//	maxSpeed = 10.0;
+
+				//if (speed > maxSpeed)
+				//	speed = maxSpeed;
 
 				if(camPitch > 1.49)
 					camPitch = 1.49;
