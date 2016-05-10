@@ -93,7 +93,59 @@ public:
 		height_f = float(landHeight);
 		
 		if (landHeight > 0.0001) {
-			if (landTypeHeight > 0.0) {
+			if (landTypeHeight > 0.51){
+				maxAmplitude = 0.0;
+				amplitude = 5000.0;
+				persistence = 0.5;
+				for (int k = 0; k < 22; k++) {
+					if (k == 11) {
+						amplitude *= 128.0;
+					}
+					height += (((noise[k])) * amplitude) * noise[k];
+					maxAmplitude += amplitude;
+					amplitude *= persistence;
+				}
+
+				height /= maxAmplitude;
+				height -= 0.15;
+				height *= maxAmplitude;
+			}
+			else if (landTypeHeight >= 0.5 && landTypeHeight <= 0.51){
+				maxAmplitude = 0.0;
+				amplitude = 5000.0;
+				persistence = 0.5;
+				for (int k = 0; k < 22; k++) {
+					if (k == 11) {
+						amplitude *= 128.0;
+					}
+					height += (((noise[k])) * amplitude) * noise[k];
+					maxAmplitude += amplitude;
+					amplitude *= persistence;
+				}
+
+				height /= maxAmplitude;
+				height -= 0.15;
+				height *= maxAmplitude;
+				
+				maxAmplitude1 = 0.0;
+				amplitude = 5000.0;
+				persistence = 0.5;
+				for (int k = 0; k < 22; k++) {
+					if (k == 11) {
+						amplitude *= 6.0;
+					}
+					height1 += ((noise[k])) * amplitude;
+					maxAmplitude1 += amplitude;
+					amplitude *= persistence;
+				}
+
+				height1 /= maxAmplitude1;
+				height1 -= 0.15;
+				height1 *= maxAmplitude1;
+				
+				height = ((landTypeHeight - 0.5) * 100 * height * maxAmplitude) + (1.0 - ((landTypeHeight - 0.5) * 100)) * height1 * maxAmplitude1;
+			}
+			else if (landTypeHeight > 0.0) {
 				maxAmplitude1 = 0.0;
 				amplitude = 5000.0;
 				persistence = 0.5;
