@@ -76,7 +76,7 @@ public:
 		landTypeHeight_f = float(landTypeHeight);
 
 
-		landMaxAmplitude = 0.0;
+		double landMaxAmplitude = 0.0;
 		amplitude = 5000.0;
 		persistence = 0.5;
 		for (int k = 0; k < 22; k++) {
@@ -100,7 +100,7 @@ public:
 					if (k == 11) {
 						amplitude *= 128.0;
 					}
-					height += (((noise[k])) * amplitude) * noise[k];
+					height += ((1.0 - abs(noise[k])) * amplitude);
 					maxAmplitude += amplitude;
 					amplitude *= persistence;
 				}
@@ -117,7 +117,7 @@ public:
 					if (k == 11) {
 						amplitude *= 128.0;
 					}
-					height += (((noise[k])) * amplitude) * noise[k];
+					height += ((1.0 - abs(noise[k])) * amplitude);
 					maxAmplitude += amplitude;
 					amplitude *= persistence;
 				}
@@ -142,7 +142,7 @@ public:
 				height1 -= 0.15;
 				height1 *= maxAmplitude1;
 				
-				height = ((landTypeHeight - 0.5) * 100 * height * maxAmplitude) + (1.0 - ((landTypeHeight - 0.5) * 100)) * height1 * maxAmplitude1;
+				height = ((landTypeHeight - 0.5) * 100 * height) + (1.0 - ((landTypeHeight - 0.5) * 100)) * height1;
 			}
 			else if (landTypeHeight > 0.0) {
 				maxAmplitude1 = 0.0;
@@ -222,45 +222,7 @@ public:
 				//height = ((landHeight) * 10000 * height1 * maxAmplitude1) + (1.0 - ((landHeight) * 10000)) * landHeight * maxAmplitude;
 			}
 		}
-		else if (landHeight >= 0.0 && landHeight <= 0.0001){
-			/*
-			if (landTypeHeight > 0.0) {
-				maxAmplitude = 0.0;
-				amplitude = 5000.0;
-				persistence = 0.5;
-				for (int k = 0; k < 22; k++) {
-					if (k == 11) {
-						amplitude *= 6.0;
-					}
-					height += ((noise[k])) * amplitude;
-					maxAmplitude += amplitude;
-					amplitude *= persistence;
-				}
-
-				//height1 += landHeight * maxAmplitude;
-				height /= maxAmplitude;
-				height -= 0.15;
-				height = ((landHeight) * 10000 * height * maxAmplitude1) + (1.0 - ((landHeight) * 10000)) * landHeight * landMaxAmplitude;
-			}
-			else {
-				maxAmplitude = 0.0;
-				amplitude = 5000.0;
-				persistence = 0.5;
-				for (int k = 0; k < 22; k++) {
-					if (k == 6)
-						amplitude *= 50.0;
-						
-					height += ((noise[k])) * amplitude;
-					maxAmplitude += amplitude;
-					amplitude *= persistence;
-				}
-
-				height /= maxAmplitude1;
-				height -= 0.15;
-				height = ((landHeight) * 10000 * height * maxAmplitude) + (1.0 - ((landHeight) * 10000)) * landHeight * maxAmplitude;
-			}
-			*/
-			
+		else if (landHeight >= 0.0 && landHeight <= 0.0001){			
 			if (landTypeHeight > 0.51){
 				maxAmplitude = 0.0;
 				amplitude = 5000.0;
@@ -269,7 +231,7 @@ public:
 					if (k == 11) {
 						amplitude *= 128.0;
 					}
-					height += (((noise[k])) * amplitude) * noise[k];
+					height += ((1.0 - abs(noise[k])) * amplitude);
 					maxAmplitude += amplitude;
 					amplitude *= persistence;
 				}
@@ -287,7 +249,7 @@ public:
 					if (k == 11) {
 						amplitude *= 128.0;
 					}
-					height += (((noise[k])) * amplitude) * noise[k];
+					height += ((1.0 - abs(noise[k])) * amplitude);
 					maxAmplitude += amplitude;
 					amplitude *= persistence;
 				}
@@ -312,7 +274,7 @@ public:
 				height1 -= 0.15;
 				height1 *= maxAmplitude1;
 				
-				height = ((landTypeHeight - 0.5) * 100 * height * maxAmplitude) + (1.0 - ((landTypeHeight - 0.5) * 100)) * height1 * maxAmplitude1;
+				height = ((landTypeHeight - 0.5) * 100 * height) + (1.0 - ((landTypeHeight - 0.5) * 100)) * height1;
 				height = ((landHeight) * 10000 * height) + (1.0 - ((landHeight) * 10000)) * landHeight * landMaxAmplitude;
 			}
 			else if (landTypeHeight > 0.0) {
