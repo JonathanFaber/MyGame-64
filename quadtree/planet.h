@@ -98,9 +98,9 @@ public:
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
 					if (k == 11) {
-						amplitude *= 128.0;
+						amplitude *= 256.0;
 					}
-					height += ((1.0 - abs(noise[k])) * amplitude);
+					height += (noise[k]) * amplitude;
 					maxAmplitude += amplitude;
 					amplitude *= persistence;
 				}
@@ -115,9 +115,9 @@ public:
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
 					if (k == 11) {
-						amplitude *= 128.0;
+						amplitude *= 256.0;
 					}
-					height += ((1.0 - abs(noise[k])) * amplitude);
+					height += (noise[k]) * amplitude;
 					maxAmplitude += amplitude;
 					amplitude *= persistence;
 				}
@@ -131,7 +131,7 @@ public:
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
 					if (k == 11) {
-						amplitude *= 6.0;
+						amplitude *= 16.0;
 					}
 					height1 += ((noise[k])) * amplitude;
 					maxAmplitude1 += amplitude;
@@ -150,7 +150,7 @@ public:
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
 					if (k == 11) {
-						amplitude *= 6.0;
+						amplitude *= 16.0;
 					}
 					height += ((noise[k])) * amplitude;
 					maxAmplitude1 += amplitude;
@@ -168,7 +168,7 @@ public:
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
 					if (k == 11) {
-						amplitude *= 6.0;
+						amplitude *= 16.0;
 					}
 					height += ((noise[k])) * amplitude;
 					maxAmplitude += amplitude;
@@ -247,9 +247,9 @@ public:
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
 					if (k == 11) {
-						amplitude *= 128.0;
+						amplitude *= 256.0;
 					}
-					height += ((1.0 - abs(noise[k])) * amplitude);
+					height += (noise[k]) * amplitude;
 					maxAmplitude += amplitude;
 					amplitude *= persistence;
 				}
@@ -263,7 +263,7 @@ public:
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
 					if (k == 11) {
-						amplitude *= 6.0;
+						amplitude *= 16.0;
 					}
 					height1 += ((noise[k])) * amplitude;
 					maxAmplitude1 += amplitude;
@@ -283,7 +283,7 @@ public:
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
 					if (k == 11) {
-						amplitude *= 6.0;
+						amplitude *= 16.0;
 					}
 					height += ((noise[k])) * amplitude;
 					maxAmplitude1 += amplitude;
@@ -303,7 +303,7 @@ public:
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
 					if (k == 11) {
-						amplitude *= 6.0;
+						amplitude *= 16.0;
 					}
 					height += ((noise[k])) * amplitude;
 					maxAmplitude += amplitude;
