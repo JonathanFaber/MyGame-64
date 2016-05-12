@@ -90,9 +90,9 @@ public:
 		landHeight -= 0.15; // because planet is closer to 75 % water
 
 		height_f = float(landHeight);
-		
+
 		if (landHeight > 0.0001) {
-			if (landTypeHeight > 0.51){
+			if (landTypeHeight > 0.51) {
 				maxAmplitude = 0.0;
 				amplitude = 5000.0;
 				persistence = 0.5;
@@ -109,7 +109,7 @@ public:
 				height -= 0.15;
 				height *= maxAmplitude;
 			}
-			else if (landTypeHeight >= 0.5 && landTypeHeight <= 0.51){
+			else if (landTypeHeight >= 0.5 && landTypeHeight <= 0.51) {
 				maxAmplitude = 0.0;
 				amplitude = 5000.0;
 				persistence = 0.5;
@@ -125,13 +125,13 @@ public:
 				height /= maxAmplitude;
 				height -= 0.15;
 				height *= maxAmplitude;
-				
+
 				maxAmplitude1 = 0.0;
 				amplitude = 5000.0;
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
 					if (k == 11) {
-						amplitude *= 16.0;
+						amplitude *= 12.0;
 					}
 					height1 += ((noise[k])) * amplitude;
 					maxAmplitude1 += amplitude;
@@ -141,7 +141,7 @@ public:
 				height1 /= maxAmplitude1;
 				height1 -= 0.15;
 				height1 *= maxAmplitude1;
-				
+
 				height = ((landTypeHeight - 0.5) * 100 * height) + (1.0 - ((landTypeHeight - 0.5) * 100)) * height1;
 			}
 			else if (landTypeHeight > 0.0) {
@@ -150,7 +150,7 @@ public:
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
 					if (k == 11) {
-						amplitude *= 16.0;
+						amplitude *= 12.0;
 					}
 					height += ((noise[k])) * amplitude;
 					maxAmplitude1 += amplitude;
@@ -168,7 +168,7 @@ public:
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
 					if (k == 11) {
-						amplitude *= 16.0;
+						amplitude *= 12.0;
 					}
 					height += ((noise[k])) * amplitude;
 					maxAmplitude += amplitude;
@@ -183,7 +183,7 @@ public:
 				amplitude = 5000.0;
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
-					if (k == 12)
+					if (k == 10)
 						amplitude *= 50.0;
 					if (k == 15)
 						persistence = 0.25;
@@ -199,12 +199,12 @@ public:
 				height = ((landTypeHeight + 0.01) * 100 * height * maxAmplitude) + (1.0 - ((landTypeHeight + 0.01) * 100)) * height1 * maxAmplitude1;
 				//height = 1000.0;
 			}
-			else if (landTypeHeight < -0.01){
+			else if (landTypeHeight < -0.01) {
 				maxAmplitude1 = 0.0;
 				amplitude = 5000.0;
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
-					if (k == 12)
+					if (k == 10)
 						amplitude *= 50.0;
 					if (k == 15)
 						persistence = 0.25;
@@ -222,8 +222,8 @@ public:
 				//height = ((landHeight) * 10000 * height1 * maxAmplitude1) + (1.0 - ((landHeight) * 10000)) * landHeight * maxAmplitude;
 			}
 		}
-		else if (landHeight >= 0.0 && landHeight <= 0.0001){			
-			if (landTypeHeight > 0.51){
+		else if (landHeight >= 0.0 && landHeight <= 0.0001) {
+			if (landTypeHeight > 0.51) {
 				maxAmplitude = 0.0;
 				amplitude = 5000.0;
 				persistence = 0.5;
@@ -241,7 +241,7 @@ public:
 				height *= maxAmplitude;
 				height = ((landHeight) * 10000 * height) + (1.0 - ((landHeight) * 10000)) * landHeight * landMaxAmplitude;
 			}
-			else if (landTypeHeight >= 0.5 && landTypeHeight <= 0.51){
+			else if (landTypeHeight >= 0.5 && landTypeHeight <= 0.51) {
 				maxAmplitude = 0.0;
 				amplitude = 5000.0;
 				persistence = 0.5;
@@ -257,13 +257,13 @@ public:
 				height /= maxAmplitude;
 				height -= 0.15;
 				height *= maxAmplitude;
-				
+
 				maxAmplitude1 = 0.0;
 				amplitude = 5000.0;
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
 					if (k == 11) {
-						amplitude *= 16.0;
+						amplitude *= 12.0;
 					}
 					height1 += ((noise[k])) * amplitude;
 					maxAmplitude1 += amplitude;
@@ -273,7 +273,7 @@ public:
 				height1 /= maxAmplitude1;
 				height1 -= 0.15;
 				height1 *= maxAmplitude1;
-				
+
 				height = ((landTypeHeight - 0.5) * 100 * height) + (1.0 - ((landTypeHeight - 0.5) * 100)) * height1;
 				height = ((landHeight) * 10000 * height) + (1.0 - ((landHeight) * 10000)) * landHeight * landMaxAmplitude;
 			}
@@ -283,7 +283,7 @@ public:
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
 					if (k == 11) {
-						amplitude *= 16.0;
+						amplitude *= 12.0;
 					}
 					height += ((noise[k])) * amplitude;
 					maxAmplitude1 += amplitude;
@@ -293,7 +293,7 @@ public:
 				height /= maxAmplitude1;
 				height -= 0.15;
 				height *= maxAmplitude1;
-				
+
 				height = ((landHeight) * 10000 * height) + (1.0 - ((landHeight) * 10000)) * landHeight * landMaxAmplitude;
 			}
 			else if (landTypeHeight >= -0.01 && landTypeHeight <= 0.0) {
@@ -303,7 +303,7 @@ public:
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
 					if (k == 11) {
-						amplitude *= 16.0;
+						amplitude *= 12.0;
 					}
 					height += ((noise[k])) * amplitude;
 					maxAmplitude += amplitude;
@@ -318,7 +318,7 @@ public:
 				amplitude = 5000.0;
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
-					if (k == 12)
+					if (k == 10)
 						amplitude *= 50.0;
 					if (k == 15)
 						persistence = 0.25;
@@ -334,12 +334,12 @@ public:
 				height = ((landTypeHeight + 0.01) * 100 * height * maxAmplitude) + (1.0 - ((landTypeHeight + 0.01) * 100)) * height1 * maxAmplitude1;
 				height = ((landHeight) * 10000 * height) + (1.0 - ((landHeight) * 10000)) * landHeight * landMaxAmplitude;
 			}
-			else if (landTypeHeight < -0.01){
+			else if (landTypeHeight < -0.01) {
 				maxAmplitude1 = 0.0;
 				amplitude = 5000.0;
 				persistence = 0.5;
 				for (int k = 0; k < 22; k++) {
-					if (k == 12)
+					if (k == 10)
 						amplitude *= 50.0;
 					if (k == 15)
 						persistence = 0.25;
@@ -352,80 +352,23 @@ public:
 				height /= maxAmplitude1;
 				height -= 0.15;
 				height *= maxAmplitude1;
-				
+
 				height = ((landHeight) * 10000 * height) + (1.0 - ((landHeight) * 10000)) * landHeight * landMaxAmplitude;
 			}
-			
+
 		}
 		else {
 			height = landHeight;
 			height *= maxAmplitude;
 		}
-		
+
 
 		if (height <= 0.0)
 			height = 0.0;
 
-		
-		
+
+
 		terrain = double3(tempNormal.x * height, tempNormal.y * height, tempNormal.z * height);
-
-
-		/*
-		if (height >= 0.4 && height <= 0.42) {
-			double tempHeight;
-			freq = 128.0;
-			lacunarity = 1.7;
-			amplitude = 3000.0;
-			for (int k = 0; k < 22; k++) {
-				//if (j == 5)
-				//	amplitude *= 0.25;
-				double noiseInput[3] = { pos.x / maxLength * freq, pos.y / maxLength * freq, pos.z / maxLength * freq };
-				if (k < 1)
-					tempHeight = (1.0 - abs(raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])));
-				else
-					tempHeight = (1.0 - abs(raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])));
-
-				//tempHeight *= tempHeight;
-				height1 += tempHeight * amplitude;
-				maxAmplitude1 += amplitude;
-				freq *= lacunarity;
-				amplitude *= persistence;
-			}
-			height1 += height * maxAmplitude;
-			height1 /= maxAmplitude1;
-			height = ((height - 0.4) * 50 * height1 * maxAmplitude1) + (1.0 - ((height - 0.4) * 50)) * height * maxAmplitude;
-		}
-		/*
-		else if (height > 0.42) {
-		double tempHeight;
-		freq = 128.0;
-		lacunarity = 1.7;
-		amplitude = 3000.0;
-		for (int k = 0; k < 22; k++) {
-		//if (j == 5)
-		//	amplitude *= 0.25;
-		double noiseInput[3] = { pos.x / maxLength * freq, pos.y / maxLength * freq, pos.z / maxLength * freq };
-		if (k < 1) {
-		tempHeight = (1.0 - abs(raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])));
-		tempHeight *= tempHeight;
-		}
-		else
-		tempHeight = (1.0 - abs(raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])));
-
-		//tempHeight *= tempHeight;
-		height1 += tempHeight * amplitude;
-		maxAmplitude1 += amplitude;
-		freq *= lacunarity;
-		amplitude *= persistence;
-		}
-		height = height1 + height * maxAmplitude;
-		//verticesFinal[z * (chunkLength + 1) + x].height = float(height);
-		}
-		else {
-		height *= maxAmplitude;
-		}
-		*/
 	}
 
 }terrainPoint;
@@ -489,8 +432,8 @@ class Planet {
 						counter = 0;
 
 						for (int j = 0; j < 2048; j++) {
-							if (counter == 0) {
-								if (drawQuad[j] == false) {
+							if (drawQuad[j] == false) {
+								if (counter == 0) {
 									quadData[j].posSquare = double3(temp.posSquare.x - 0.5*temp.length, squarePosY, temp.posSquare.z - 0.5*temp.length);
 									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
 
@@ -501,10 +444,10 @@ class Planet {
 									quadData[j].pos.y *= maxLength;
 									quadData[j].pos.z *= maxLength;
 									quadData[j].length = temp.length / 2.0;
-									
+
 									terrainPoint.generateTerrainPoint(tempNormal);
 
-									
+
 
 									quadData[j].pos.x += terrainPoint.terrain.x;
 									quadData[j].pos.y += terrainPoint.terrain.y;
@@ -515,9 +458,7 @@ class Planet {
 									firstUpdate[j] = true;
 									counter++;
 								}
-							}
-							else if (counter == 1) {
-								if (drawQuad[j] == false) {
+								else if (counter == 1) {
 									quadData[j].posSquare = double3(temp.posSquare.x + 0.5*temp.length, squarePosY, temp.posSquare.z - 0.5*temp.length);
 									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
 
@@ -541,9 +482,7 @@ class Planet {
 									firstUpdate[j] = true;
 									counter++;
 								}
-							}
-							else if (counter == 2) {
-								if (drawQuad[j] == false) {
+								else if (counter == 2) {
 									quadData[j].posSquare = double3(temp.posSquare.x + 0.5*temp.length, squarePosY, temp.posSquare.z + 0.5*temp.length);
 									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
 
@@ -568,9 +507,7 @@ class Planet {
 									firstUpdate[j] = true;
 									counter++;
 								}
-							}
-							else if (counter == 3) {
-								if (drawQuad[j] == false) {
+								else if (counter == 3) {
 									quadData[j].posSquare = double3(temp.posSquare.x - 0.5*temp.length, squarePosY, temp.posSquare.z + 0.5*temp.length);
 									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
 
@@ -597,7 +534,6 @@ class Planet {
 								}
 							}
 						}
-
 					}
 					if (quadData[i].combine == true) {
 
@@ -742,7 +678,7 @@ class Planet {
 				groundWorld = Scale * Translation;
 			}
 
-			double3 position[chunkLength+1][chunkLength+1];
+			double3 position[chunkLength + 1][chunkLength + 1];
 
 			void updateChunkData(quad chunkData) {
 				for (int z = 0; z < (chunkLength + 1); z++) {
@@ -751,7 +687,7 @@ class Planet {
 
 
 
-						temp.x = double(verticesInitial[z * (chunkLength+1) + x].pos.x) * chunkData.length;
+						temp.x = double(verticesInitial[z * (chunkLength + 1) + x].pos.x) * chunkData.length;
 						temp.y = double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * chunkData.length;
 						temp.z = double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * chunkData.length;
 
@@ -767,7 +703,7 @@ class Planet {
 
 						temp = spherize(temp);
 
-						
+
 						double3 tempNormal = temp;
 
 						temp.x *= maxLength;
@@ -783,7 +719,7 @@ class Planet {
 						temp.y += terrainPoint.terrain.y;
 						temp.z += terrainPoint.terrain.z;
 
-						
+
 
 						temp.x = temp.x - firstCamPos.x;
 						temp.y = temp.y - firstCamPos.y;
@@ -799,7 +735,7 @@ class Planet {
 				double3 V;
 				double3 W;
 				double3 f_normals[2][chunkLength][chunkLength];
-				double3 normals[chunkLength+1][chunkLength+1];
+				double3 normals[chunkLength + 1][chunkLength + 1];
 
 				counter = 0;
 				for (int z = 0; z < chunkLength; z++) {
@@ -852,9 +788,9 @@ class Planet {
 							normals[x][z] = normalize(normals[x][z]);
 						}
 						else if (x == chunkLength) {////////////CHANGE//////////////
-							normals[x][z].x = f_normals[0][x-1][z].x + f_normals[1][x-1][z].x;
-							normals[x][z].y = f_normals[0][x-1][z].y + f_normals[1][x-1][z].y;
-							normals[x][z].z = f_normals[0][x-1][z].z + f_normals[1][x-1][z].z;
+							normals[x][z].x = f_normals[0][x - 1][z].x + f_normals[1][x - 1][z].x;
+							normals[x][z].y = f_normals[0][x - 1][z].y + f_normals[1][x - 1][z].y;
+							normals[x][z].z = f_normals[0][x - 1][z].z + f_normals[1][x - 1][z].z;
 							normals[x][z] = normalize(normals[x][z]);
 						}
 						else if (z == chunkLength) {
@@ -1024,11 +960,11 @@ class Planet {
 						counter = 0;
 
 						for (int j = 0; j < 2048; j++) {
-							if (counter == 0) {
-								if (drawQuad[j] == false) {
+							if (drawQuad[j] == false) {
+								if (counter == 0) {
 									quadData[j].posSquare = double3(squarePosX, temp.posSquare.y - 0.5*temp.length, temp.posSquare.z - 0.5*temp.length);
 									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
-									
+
 									// Next apply height
 									double3 tempNormal = quadData[j].pos;
 
@@ -1054,9 +990,7 @@ class Planet {
 									firstUpdate[j] = true;
 									counter++;
 								}
-							}
-							else if (counter == 1) {
-								if (drawQuad[j] == false) {
+								else if (counter == 1) {
 									quadData[j].posSquare = double3(squarePosX, temp.posSquare.y + 0.5*temp.length, temp.posSquare.z - 0.5*temp.length);
 									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
 
@@ -1085,9 +1019,7 @@ class Planet {
 									firstUpdate[j] = true;
 									counter++;
 								}
-							}
-							else if (counter == 2) {
-								if (drawQuad[j] == false) {
+								else if (counter == 2) {
 									quadData[j].posSquare = double3(squarePosX, temp.posSquare.y + 0.5*temp.length, temp.posSquare.z + 0.5*temp.length);
 									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
 
@@ -1116,9 +1048,7 @@ class Planet {
 									firstUpdate[j] = true;
 									counter++;
 								}
-							}
-							else if (counter == 3) {
-								if (drawQuad[j] == false) {
+								else if (counter == 3) {
 									quadData[j].posSquare = double3(squarePosX, temp.posSquare.y - 0.5*temp.length, temp.posSquare.z + 0.5*temp.length);
 									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
 
@@ -1550,8 +1480,8 @@ class Planet {
 						counter = 0;
 
 						for (int j = 0; j < 2048; j++) {
-							if (counter == 0) {
-								if (drawQuad[j] == false) {
+							if (drawQuad[j] == false) {
+								if (counter == 0) {
 									quadData[j].posSquare = double3(temp.posSquare.x - 0.5*temp.length, temp.posSquare.y - 0.5*temp.length, squarePosZ);
 									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
 
@@ -1580,9 +1510,7 @@ class Planet {
 									firstUpdate[j] = true;
 									counter++;
 								}
-							}
-							else if (counter == 1) {
-								if (drawQuad[j] == false) {
+								else if (counter == 1) {
 									quadData[j].posSquare = double3(temp.posSquare.x + 0.5*temp.length, temp.posSquare.y - 0.5*temp.length, squarePosZ);
 									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
 
@@ -1611,9 +1539,7 @@ class Planet {
 									firstUpdate[j] = true;
 									counter++;
 								}
-							}
-							else if (counter == 2) {
-								if (drawQuad[j] == false) {
+								else if (counter == 2) {
 									quadData[j].posSquare = double3(temp.posSquare.x + 0.5*temp.length, temp.posSquare.y + 0.5*temp.length, squarePosZ);
 									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
 
@@ -1642,9 +1568,7 @@ class Planet {
 									firstUpdate[j] = true;
 									counter++;
 								}
-							}
-							else if (counter == 3) {
-								if (drawQuad[j] == false) {
+								else if (counter == 3) {
 									quadData[j].posSquare = double3(temp.posSquare.x - 0.5*temp.length, temp.posSquare.y + 0.5*temp.length, squarePosZ);
 									quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
 
