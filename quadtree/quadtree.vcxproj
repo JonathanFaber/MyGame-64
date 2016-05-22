@@ -158,6 +158,7 @@
   <ItemGroup>
     <ClInclude Include="camera.h" />
     <ClInclude Include="includes.h" />
+    <ClInclude Include="noiseFunctions.h" />
     <ClInclude Include="planet.h" />
     <ClInclude Include="shaders.h" />
     <ClInclude Include="simplexnoise.h" />

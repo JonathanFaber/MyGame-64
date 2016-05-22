@@ -426,6 +426,8 @@ bool InitScene()
 		NULL, NULL, &texture[6], NULL);
 	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"textures/grassalpha.png",
 		NULL, NULL, &texture[7], NULL);
+	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"textures/SandTexture.png",
+		NULL, NULL, &texture[8], NULL);
 
 	//Tell D3D we will be loading a cube texture
 	D3DX11_IMAGE_LOAD_INFO loadSMInfo;
