@@ -11,7 +11,7 @@ const int chunkLength = 32;
 const double maxLength = 4194304.0;
 const double minLength = 16.0;
 
-
+//
 class TerrainPoint {
 public:
 	double3 tempNormal;

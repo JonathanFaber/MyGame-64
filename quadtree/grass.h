@@ -793,9 +793,6 @@ public:
 
 		counter = 0;
 
-		/////////////////////////////////////////////// chunk terrain data is not instantly calculated /////////////////////////////////////////////////////
-
-		//*
 		for (int i = 0; i < 2048; i++) {
 			if (planet.sideY1.quadData[i].draw == true && planet.sideY1.quadData[i].firstUpdate == false) {
 				if (planet.sideY1.quadData[i].length == minLength) {
