@@ -169,71 +169,38 @@ SPRITE_VS_OUTPUT SPRITE_VS(float4 inPos : POSITION, float2 inTexCoord : TEXCOORD
 	return output;
 }
 
-INSTANCE_VS_OUTPUT INSTANCE_VS(float4 inPos : POSITION, float2 inTexCoord : TEXCOORD, float3 normal : NORMAL, float3 instancePos : INSTANCEPOS, float3 instancePosBL : INSTANCEPOSBL, float3 instancePosBR : INSTANCEPOSBR, float3 instancePosTR : INSTANCEPOSTR, float3 instancePosTL : INSTANCEPOSTL, float3 instancePosSquare : INSTANCEPOSSQUARE, float instanceScale : INSTANCESCALE, uint indexID : SV_VertexID)
+INSTANCE_VS_OUTPUT INSTANCE_VS(float4 inPos : POSITION, float2 inTexCoord : TEXCOORD, float3 normal : NORMAL, float2 instancePos : INSTANCEPOS, float4 instanceHeights : INSTANCEHEIGHTS, float3 instanceRot : INSTANCEROT, uint indexID : SV_VertexID)
 {
 	INSTANCE_VS_OUTPUT output;
 
+	float firstPosX = inPos.x;
+	float firstPosY = inPos.y;
+	float firstPosZ = inPos.z;
 
-	///*
+	/*
+	if (indexID == 0 || indexID == 4 || indexID == 6)
+	inPos.y += (instanceHeights.x+instanceHeights.w)/2.0f;
+	else if (indexID == 1 || indexID == 5 || indexID == 7)
+	inPos.y += (instanceHeights.y+instanceHeights.z)/2.0f;
+	else if (indexID == 2 || indexID == 8 || indexID == 9)
+	inPos.y += (instanceHeights.x+instanceHeights.y)/2.0f;
+	else if (indexID == 3 || indexID == 10 || indexID == 11)
+	inPos.y += (instanceHeights.w+instanceHeights.z)/2.0f;
+	else if (indexID == 0+12 || indexID == 4+12 || indexID == 6+12 || indexID == 2+12 || indexID == 8+12 || indexID == 9+12)
+	inPos.y += instanceHeights.x;
+	else if (indexID == 1+12 || indexID == 5+12 || indexID == 7+12)
+	inPos.y += instanceHeights.y;
+	else if (indexID == 3+12 || indexID == 10+12 || indexID == 11+12)
+	inPos.y += instanceHeights.w;
+	*/
+	inPos.y += (instanceHeights.x + instanceHeights.y + instanceHeights.z + instanceHeights.w) / 4.0f;
 
-	double maxLength = 4194304.0;
-	double instanceScale_d = double(instanceScale);
+	inPos.x += instanceRot.x*firstPosY;
+	inPos.y += instanceRot.y*firstPosY;
+	inPos.z += instanceRot.z*firstPosY;
 
-	if (instanceScale_d > 1024.0) {
-
-		double div = double(1.0f / 64.0f) * double(1.0f / 32.0f) * double(1.0f / 64.0f) * double(1.0f / 32.0f);
-
-		double3 tempPos = double3(double(inPos.x), double(inPos.y), double(inPos.z));
-
-
-
-
-		tempPos.x *= instanceScale_d;
-		tempPos.y *= instanceScale_d;
-		tempPos.z *= instanceScale_d;
-
-		double3 instancePosSquare_d = double3(double(instancePosSquare.x), double(instancePosSquare.y), double(instancePosSquare.z));
-
-		tempPos.x += instancePosSquare_d.x;
-		tempPos.y += instancePosSquare_d.y;
-		tempPos.z += instancePosSquare_d.z;
-
-		//float3 tempPos1 = float3(tempPos.x, tempPos.y, tempPos.z);
-		tempPos.x *= div;
-		tempPos.y *= div;
-		tempPos.z *= div;
-
-		tempPos = spherize_d(tempPos);
-		tempPos.x *= maxLength;
-		tempPos.y *= maxLength;
-		tempPos.z *= maxLength;
-
-
-		double3 middlePos = spherize_d(double3(instancePosSquare_d.x*div, instancePosSquare_d.y*div, instancePosSquare_d.z*div));
-		middlePos.x *= maxLength;
-		middlePos.y *= maxLength;
-		middlePos.z *= maxLength;
-
-		tempPos.x += double(instancePos.x) - middlePos.x;
-		tempPos.y += double(instancePos.y) - middlePos.y;
-		tempPos.z += double(instancePos.z) - middlePos.z;
-
-
-		inPos.x = float(tempPos.x);
-		inPos.y = float(tempPos.y);
-		inPos.z = float(tempPos.z);
-	}
-	else {
-		// Do bilinear interpolation
-
-		inPos.x = (instancePosBL.x * (1.0f - inTexCoord.x) * (1.0f - inTexCoord.y) + instancePosBR.x * (1.0f + inTexCoord.x) * (1.0f - inTexCoord.y) + instancePosTR.x * (1.0f + inTexCoord.x) * (1.0f + inTexCoord.y) + instancePosTL.x * (1.0f - inTexCoord.x) * (1.0f + inTexCoord.y)) / 4.0f;
-		inPos.y = (instancePosBL.y * (1.0f - inTexCoord.x) * (1.0f - inTexCoord.y) + instancePosBR.y * (1.0f + inTexCoord.x) * (1.0f - inTexCoord.y) + instancePosTR.y * (1.0f + inTexCoord.x) * (1.0f + inTexCoord.y) + instancePosTL.y * (1.0f - inTexCoord.x) * (1.0f + inTexCoord.y)) / 4.0f;
-		inPos.z = (instancePosBL.z * (1.0f - inTexCoord.x) * (1.0f - inTexCoord.y) + instancePosBR.z * (1.0f + inTexCoord.x) * (1.0f - inTexCoord.y) + instancePosTR.z * (1.0f + inTexCoord.x) * (1.0f + inTexCoord.y) + instancePosTL.z * (1.0f - inTexCoord.x) * (1.0f + inTexCoord.y)) / 4.0f;
-	}
-
-
-	//*/
-	
+	inPos.x += instancePos.x;
+	inPos.z += instancePos.y;
 
 	output.Pos = mul(inPos, WVP);
 
@@ -356,45 +323,26 @@ float4 INSTANCE_PS(INSTANCE_VS_OUTPUT input) : SV_TARGET
 {
 	input.normal = normalize(input.normal);
 
-
-	/*
 	float4 diffuse;
+	/*
+	if (input.texID == 0)
+	diffuse = ObjTexture[0].Sample( ObjSamplerState, input.TexCoord );
+	else if (input.texID == 1)
+	diffuse = ObjTexture[1].Sample( ObjSamplerState, input.TexCoord );
+	else if (input.texID == 2)
+	diffuse = ObjTexture[2].Sample( ObjSamplerState, input.TexCoord );
+	else if (input.texID == 3)
+	diffuse = ObjTexture[3].Sample( ObjSamplerState, input.TexCoord );
+	else if (input.texID == 4)
+	*/
 
-
-	//diffuse = ObjTexture[0].Sample( ObjSamplerState, input.TexCoord );
-	//diffuse = float4(0.0f, 1.0f, 0.0f, 1.0f);
-
-	const int octaves = 16;
-	float f[octaves];
-	float fsum = 0.0f;
-	float amplitude = 0.5f;
-	float frequency = 2.0f;
-
-	for (int i = 0; i < octaves; i++) {
-		f[i] = (noise(float2(input.TexCoord.x*frequency + i, input.TexCoord.y*frequency + i)));
-		f[i] = (1.0f - abs(f[i])) * amplitude;
-		fsum += f[i];
-
-		amplitude *= 0.5f;
-		frequency *= 2.0f;
-	}
-
-	//fsum *= 0.5f;
-	//fsum = 0.5 + 0.5*fsum; // so that its between 0 and 1
-
-	//f *= smoothstep(0.0, 0.005, abs(input.TexCoord.x));
+	diffuse = ObjTexture[0].Sample(ObjSamplerState, input.TexCoord);
 
 	float3 finalColor;
 
 	finalColor = diffuse * light.ambient;
+
 	finalColor += saturate(dot(light.dir, input.normal) * light.diffuse * diffuse);
 
-
-	finalColor = float3(fsum, fsum, fsum);
-	*/
-	float3 finalColor = float3(1.0f, 1.0f, 1.0f);
-
-
-	//return float4(finalColor, diffuse.a);
-	return float4(finalColor, 1.0f);
+	return float4(finalColor, diffuse.a);
 }

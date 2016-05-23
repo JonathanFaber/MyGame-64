@@ -157,6 +157,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="camera.h" />
+    <ClInclude Include="grass.h" />
     <ClInclude Include="includes.h" />
     <ClInclude Include="noiseFunctions.h" />
     <ClInclude Include="planet.h" />

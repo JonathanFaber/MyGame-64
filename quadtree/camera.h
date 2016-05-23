@@ -1,5 +1,5 @@
-//#include "terrain.h"
 #include "includes.h"
+#include "planet.h"
 
 #ifndef __CAMERA_H_INCLUDED__
 #define __CAMERA_H_INCLUDED__ 
@@ -296,6 +296,26 @@ void DetectKeyboardInput(double time)
 			}
 		}
 		*/
+
+		double3 terrainPos = normalize(camPos);
+		terrainPos.x *= maxLength;
+		terrainPos.y *= maxLength;
+		terrainPos.z *= maxLength;
+
+		terrainPoint.generateTerrainPoint(normalize(camPos));
+
+
+		terrainPos.x += terrainPoint.terrain.x;
+		terrainPos.y += terrainPoint.terrain.y;
+		terrainPos.z += terrainPoint.terrain.z;
+
+		if (vLength(camPos) < vLength(terrainPos) + camHeight) {
+			camPos = terrainPos;
+			double3 temp = normalize(camPos);
+			camPos.x += temp.x * camHeight;
+			camPos.y += temp.y * camHeight;
+			camPos.z += temp.z * camHeight;
+		}
 
 		playerVelocity = vLength(double3(camPos.x - lastCamPos.x, camPos.y - lastCamPos.y, camPos.z - lastCamPos.z))/time;
 

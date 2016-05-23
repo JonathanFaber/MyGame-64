@@ -9,9 +9,10 @@
 
 const int chunkLength = 32;
 const double maxLength = 4194304.0;
+const double minLength = 16.0;
 
 
-class terrainPoint {
+class TerrainPoint {
 public:
 	double3 tempNormal;
 	double height;
@@ -378,11 +379,9 @@ public:
 
 }terrainPoint;
 
-
-
 class Planet {
-
-	struct quad {
+public:
+	struct Quad {
 		double3 pos;
 		double3 posSquare;
 		double3 posAway;
@@ -392,14 +391,14 @@ class Planet {
 		bool combine;
 		bool draw;
 
-		quad() {}
-		quad(double3 pos1, double3 posSquare1, double length1) : pos(pos1), posSquare(posSquare1), length(length1) {}
+		Quad() {}
+		Quad(double3 pos1, double3 posSquare1, double length1) : pos(pos1), posSquare(posSquare1), length(length1) {}
 
 		void update() {
 			posAway = double3(pos.x - camPos.x, pos.y - camPos.y, pos.z - camPos.z);
 			distance = vLength(posAway);
 
-			if (distance < length*4.0 && length > maxLength / 262144.0) {
+			if (distance < length*4.0 && length > minLength) {
 				subdivide = true;
 				combine = false;
 			}
@@ -412,14 +411,351 @@ class Planet {
 				combine = false;
 			}
 		}
+
+	private:
+		ID3D11Buffer* indexBuffer;
+		ID3D11Buffer* vertBuffer;
+		XMMATRIX groundWorld;
+
+		PlanetVertex verticesInitial[(chunkLength + 1)*(chunkLength + 1)];
+		PlanetVertex verticesFinal[(chunkLength + 1)*(chunkLength + 1)];
+		DWORD indices[chunkLength*chunkLength * 6];
+
+		D3D11_BUFFER_DESC indexBufferDesc;
+		D3D11_SUBRESOURCE_DATA indexBufferData;
+		D3D11_BUFFER_DESC vertexBufferDesc;
+		D3D11_SUBRESOURCE_DATA initialVertexBufferData;
+		D3D11_MAPPED_SUBRESOURCE updatedVertexBufferData;
+
+	public:
+		double3 firstCamPos;
+		double3 position[chunkLength + 1][chunkLength + 1];
+		bool terrainCalculated;
+		bool firstUpdate;
+
+		void create(char side) {
+			if (side == 'y') {
+				counter = 0;
+				for (int z = 0; z < chunkLength + 1; z++) {
+					for (int x = 0; x < chunkLength + 1; x++) {
+						verticesInitial[counter] = PlanetVertex(float(x - chunkLength / 2) / 16.0f, 0.0f, float(z - chunkLength / 2) / 16.0f, float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f);
+						counter++;
+					}
+				}
+			}
+			else if (side == 'x') {
+				counter = 0;
+				for (int z = 0; z < chunkLength + 1; z++) {
+					for (int x = 0; x < chunkLength + 1; x++) {
+						verticesInitial[counter] = PlanetVertex(0.0f, float(z - chunkLength / 2) / 16.0f, float(x - chunkLength / 2) / 16.0f, float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
+						counter++;
+					}
+				}
+			}
+			else {
+				counter = 0;
+				for (int z = 0; z < chunkLength + 1; z++) {
+					for (int x = 0; x < chunkLength + 1; x++) {
+						verticesInitial[counter] = PlanetVertex(float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 0.0f, float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
+						counter++;
+					}
+				}
+			}
+
+			counter = 0;
+
+			for (int x = 0; x < chunkLength; x++) {
+				for (int z = 0; z < chunkLength; z++) {
+					indices[counter] = x + z * (chunkLength + 1);
+					counter++;
+					indices[counter] = x + 1 + z * (chunkLength + 1);
+					counter++;
+					indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1);
+					counter++;
+					indices[counter] = x + z * (chunkLength + 1);
+					counter++;
+					indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1);
+					counter++;
+					indices[counter] = x + (chunkLength + 1) + z * (chunkLength + 1);
+					counter++;
+				}
+			}
+
+			ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
+
+			indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+			indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+			indexBufferDesc.CPUAccessFlags = 0;
+			indexBufferDesc.MiscFlags = 0;
+			indexBufferDesc.ByteWidth = sizeof(indices);
+
+			indexBufferData.pSysMem = indices;
+			d3d11Device->CreateBuffer(&indexBufferDesc, &indexBufferData, &indexBuffer);
+
+			ZeroMemory(&initialVertexBufferData, sizeof(initialVertexBufferData));
+			ZeroMemory(&vertexBufferDesc, sizeof(vertexBufferDesc));
+			ZeroMemory(&updatedVertexBufferData, sizeof(D3D11_MAPPED_SUBRESOURCE));
+
+			vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
+			vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+			vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+			vertexBufferDesc.MiscFlags = 0;
+			vertexBufferDesc.ByteWidth = sizeof(verticesInitial);
+
+			initialVertexBufferData.pSysMem = verticesInitial;
+			hr = d3d11Device->CreateBuffer(&vertexBufferDesc, &initialVertexBufferData, &vertBuffer);
+		}
+
+		void transform(double3 camPos) {
+			groundWorld = XMMatrixIdentity();
+			Scale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
+			Translation = XMMatrixTranslation(float(firstCamPos.x - camPos.x), float(firstCamPos.y - camPos.y), float(firstCamPos.z - camPos.z));
+			//Translation = XMMatrixTranslation(0.0f, -5.0f, 0.0f);
+			groundWorld = Scale * Translation;
+		}
+
+		void updateChunkData(char side) {
+			for (int z = 0; z < (chunkLength + 1); z++) {
+				for (int x = 0; x < (chunkLength + 1); x++) {
+					double3 temp = posSquare;
+
+
+
+					temp.x = double(verticesInitial[z * (chunkLength + 1) + x].pos.x) * length;
+					temp.y = double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * length;
+					temp.z = double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * length;
+
+					temp.x += posSquare.x;
+					temp.y += posSquare.y;
+					temp.z += posSquare.z;
+
+
+
+					temp.x /= maxLength;
+					temp.y /= maxLength;
+					temp.z /= maxLength;
+
+					temp = spherize(temp);
+
+
+					double3 tempNormal = temp;
+
+					temp.x *= maxLength;
+					temp.y *= maxLength;
+					temp.z *= maxLength;
+
+					terrainPoint.generateTerrainPoint(tempNormal);
+
+					verticesFinal[z * (chunkLength + 1) + x].height = terrainPoint.height_f;
+					verticesFinal[z * (chunkLength + 1) + x].landTypeHeight = terrainPoint.landTypeHeight_f;
+
+					temp.x += terrainPoint.terrain.x;
+					temp.y += terrainPoint.terrain.y;
+					temp.z += terrainPoint.terrain.z;
+
+
+
+					temp.x = temp.x - firstCamPos.x;
+					temp.y = temp.y - firstCamPos.y;
+					temp.z = temp.z - firstCamPos.z;
+
+					position[x][z] = temp;
+
+					verticesFinal[z * (chunkLength + 1) + x].pos = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
+					if (side == 'y')
+						verticesFinal[z * (chunkLength + 1) + x].texCoord = XMFLOAT2(float(double(verticesInitial[z * (chunkLength + 1) + x].pos.x) * length), float(double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * length));
+					else if (side == 'x')
+						verticesFinal[z * (chunkLength + 1) + x].texCoord = XMFLOAT2(float(double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * length), float(double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * length));
+					else
+						verticesFinal[z * (chunkLength + 1) + x].texCoord = XMFLOAT2(float(double(verticesInitial[z * (chunkLength + 1) + x].pos.x) * length), float(double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * length));
+				}
+			}
+
+			double3 V;
+			double3 W;
+			double3 f_normals[2][chunkLength][chunkLength];
+			double3 normals[chunkLength + 1][chunkLength + 1];
+
+			counter = 0;
+			for (int z = 0; z < chunkLength; z++) {
+				for (int x = 0; x < chunkLength; x++) {
+					for (int i = 0; i < 2; i++) {
+						if (i == 0) {
+							V.x = position[x + 1][z + 1].x - position[x][z].x;
+							V.y = position[x + 1][z + 1].y - position[x][z].y;
+							V.z = position[x + 1][z + 1].z - position[x][z].z;
+							W.x = position[x + 1][z].x - position[x][z].x;
+							W.y = position[x + 1][z].y - position[x][z].y;
+							W.z = position[x + 1][z].z - position[x][z].z;
+						}
+						if (i == 1) {
+							V.x = position[x + 1][z + 1].x - position[x][z].x;
+							V.y = position[x + 1][z + 1].y - position[x][z].y;
+							V.z = position[x + 1][z + 1].z - position[x][z].z;
+							W.x = position[x][z + 1].x - position[x][z].x;
+							W.y = position[x][z + 1].y - position[x][z].y;
+							W.z = position[x][z + 1].z - position[x][z].z;
+						}
+						f_normals[i][x][z].x = (V.y*W.z) - (V.z*W.y);
+						f_normals[i][x][z].y = (V.z*W.x) - (V.x*W.z);
+						f_normals[i][x][z].z = (V.x*W.y) - (V.y*W.x);
+						f_normals[i][x][z] = normalize(f_normals[i][x][z]);
+
+						if (side == 'y') {
+							if (posSquare.y >= 0.0) {
+								if (f_normals[i][x][z].y < 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
+							}
+							else if (posSquare.y < 0.0) {
+								if (f_normals[i][x][z].y > 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
+							}
+						}
+						else if (side == 'x') {
+							if (posSquare.x >= 0.0) {
+								if (f_normals[i][x][z].x < 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
+							}
+							else if (posSquare.x < 0.0) {
+								if (f_normals[i][x][z].x > 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
+							}
+						}
+						else {
+							if (posSquare.z >= 0.0) {
+								if (f_normals[i][x][z].z < 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
+							}
+							else if (posSquare.z < 0.0) {
+								if (f_normals[i][x][z].z > 0.0) {
+									f_normals[i][x][z].x *= -1;
+									f_normals[i][x][z].y *= -1;
+									f_normals[i][x][z].z *= -1;
+								}
+							}
+						}
+					}
+				}
+			}
+			//*
+			for (int z = 0; z < chunkLength + 1; z++) {
+				for (int x = 0; x < chunkLength + 1; x++) {
+					if (x != 0 && z != 0 && x != chunkLength && z != chunkLength) {
+						normals[x][z].x = ((f_normals[0][x - 1][z - 1].x + f_normals[1][x - 1][z - 1].x) / 2 + f_normals[0][x - 1][z].x + (f_normals[0][x][z].x + f_normals[1][x][z].x) / 2 + f_normals[1][x][z - 1].x) / 4;
+						normals[x][z].y = ((f_normals[0][x - 1][z - 1].y + f_normals[1][x - 1][z - 1].y) / 2 + f_normals[0][x - 1][z].y + (f_normals[0][x][z].y + f_normals[1][x][z].y) / 2 + f_normals[1][x][z - 1].y) / 4;
+						normals[x][z].z = ((f_normals[0][x - 1][z - 1].z + f_normals[1][x - 1][z - 1].z) / 2 + f_normals[0][x - 1][z].z + (f_normals[0][x][z].z + f_normals[1][x][z].z) / 2 + f_normals[1][x][z - 1].z) / 4;
+						normals[x][z] = normalize(normals[x][z]);
+					}
+					else if (x == chunkLength) {////////////CHANGE//////////////
+						normals[x][z].x = f_normals[0][x - 1][z].x + f_normals[1][x - 1][z].x;
+						normals[x][z].y = f_normals[0][x - 1][z].y + f_normals[1][x - 1][z].y;
+						normals[x][z].z = f_normals[0][x - 1][z].z + f_normals[1][x - 1][z].z;
+						normals[x][z] = normalize(normals[x][z]);
+					}
+					else if (z == chunkLength) {
+						normals[x][z].x = f_normals[0][x][z - 1].x + f_normals[1][x][z - 1].x;
+						normals[x][z].y = f_normals[0][x][z - 1].y + f_normals[1][x][z - 1].y;
+						normals[x][z].z = f_normals[0][x][z - 1].z + f_normals[1][x][z - 1].z;
+						normals[x][z] = normalize(normals[x][z]);
+					}
+					else {////////////CHANGE//////////////
+						normals[x][z].x = f_normals[0][x][z].x + f_normals[1][x][z].x;
+						normals[x][z].y = f_normals[0][x][z].y + f_normals[1][x][z].y;
+						normals[x][z].z = f_normals[0][x][z].z + f_normals[1][x][z].z;
+						normals[x][z] = normalize(normals[x][z]);
+					}
+					verticesFinal[z * (chunkLength + 1) + x].normal = XMFLOAT3(float(normals[x][z].x), float(normals[x][z].y), float(normals[x][z].z));
+				}
+			}
+			//*/
+			/*
+			for (int z = 0; z < chunkLength + 1; z++) {
+			for (int x = 0; x < chunkLength + 1; x++) {
+			if (x != chunkLength && z != chunkLength) {
+			normals[x][z].x = f_normals[0][x][z].x + f_normals[1][x][z].x;
+			normals[x][z].y = f_normals[0][x][z].y + f_normals[1][x][z].y;
+			normals[x][z].z = f_normals[0][x][z].z + f_normals[1][x][z].z;
+			normals[x][z] = normalize(normals[x][z]);
+			}
+			else if (x == chunkLength) {////////////CHANGE//////////////
+			normals[x][z].x = f_normals[0][x-1][z].x + f_normals[1][x-1][z].x;
+			normals[x][z].y = f_normals[0][x-1][z].y + f_normals[1][x-1][z].y;
+			normals[x][z].z = f_normals[0][x-1][z].z + f_normals[1][x-1][z].z;
+			}
+			else {
+			normals[x][z].x = f_normals[0][x][z-1].x + f_normals[1][x][z-1].x;
+			normals[x][z].y = f_normals[0][x][z-1].y + f_normals[1][x][z-1].x;
+			normals[x][z].z = f_normals[0][x][z-1].z + f_normals[1][x][z-1].x;
+			}
+			verticesFinal[z * (chunkLength + 1) + x].normal = XMFLOAT3(float(normals[x][z].x), float(normals[x][z].y), float(normals[x][z].z));
+			}
+			}
+			//*/
+
+			d3d11DevCon->Map(vertBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &updatedVertexBufferData);
+			memcpy(updatedVertexBufferData.pData, verticesFinal, sizeof(verticesFinal));
+			d3d11DevCon->Unmap(vertBuffer, 0);
+
+			terrainCalculated = true;
+		}
+
+		void drawTerrain() {
+			//Set Vertex and Pixel Shaders
+			d3d11DevCon->VSSetShader(PLANET_VS, 0, 0);
+			d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
+
+			//Set the Input Layout
+			d3d11DevCon->IASetInputLayout(planetLayout);
+
+			UINT stride = sizeof(PlanetVertex);
+			UINT offset = 0;
+
+			d3d11DevCon->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+			d3d11DevCon->IASetVertexBuffers(0, 1, &vertBuffer, &stride, &offset);
+
+			//Set the WVP matrix and send it to the constant buffer in effect file
+			//WVP = groundWorld * camView * camProjection;
+			WVP = groundWorld * camView * planetCamProjection;
+			cbPerObj.WVP = XMMatrixTranspose(WVP);
+			cbPerObj.World = XMMatrixTranspose(groundWorld);
+			d3d11DevCon->UpdateSubresource(cbPerObjectBuffer, 0, NULL, &cbPerObj, 0, 0);
+			d3d11DevCon->VSSetConstantBuffers(0, 1, &cbPerObjectBuffer);
+			d3d11DevCon->PSSetShaderResources(0, 1, &texture[0]);
+			d3d11DevCon->PSSetShaderResources(1, 1, &texture[2]);
+			d3d11DevCon->PSSetShaderResources(2, 1, &texture[8]);
+			d3d11DevCon->PSSetSamplers(0, 1, &CubesTexSamplerState);
+
+			d3d11DevCon->RSSetState(RSCullNone);
+			//d3d11DevCon->RSSetState(Wireframe);
+			d3d11DevCon->DrawIndexed(chunkLength*chunkLength * 6, 0, 0);
+		}
+
+		void cleanUp() {
+			vertBuffer->Release();
+			indexBuffer->Release();
+		}
 	};
 
 
-	class sideY {
-		quad quadData[2048];
-		bool firstUpdate[2048];
-		int numInstances;
+
+	class SideY {
 	public:
+		Quad quadData[2048];
 		double squarePosY;
 
 		void subdivideQuad() {
@@ -428,9 +764,10 @@ class Planet {
 				if (quadData[i].subdivide == true && exitLoop == false) {
 
 					quadData[i].draw = false;
+					quadData[i].terrainCalculated = false;
 					quadData[i].subdivide = false;
 					quadData[i].combine = false;
-					quad temp = quadData[i];
+					Quad temp = quadData[i];
 					counter = 0;
 
 					for (int j = 0; j < 2048; j++) {
@@ -458,7 +795,7 @@ class Planet {
 								quadData[j].subdivide = false;
 								quadData[j].combine = false;
 								quadData[j].draw = true;
-								firstUpdate[j] = true;
+								quadData[j].firstUpdate = true;
 								counter++;
 							}
 							else if (counter == 1) {
@@ -483,7 +820,7 @@ class Planet {
 								quadData[j].subdivide = false;
 								quadData[j].combine = false;
 								quadData[j].draw = true;
-								firstUpdate[j] = true;
+								quadData[j].firstUpdate = true;
 								counter++;
 							}
 							else if (counter == 2) {
@@ -509,7 +846,7 @@ class Planet {
 								quadData[j].subdivide = false;
 								quadData[j].combine = false;
 								quadData[j].draw = true;
-								firstUpdate[j] = true;
+								quadData[j].firstUpdate = true;
 								counter++;
 							}
 							else if (counter == 3) {
@@ -535,7 +872,7 @@ class Planet {
 								quadData[j].subdivide = false;
 								quadData[j].combine = false;
 								quadData[j].draw = true;
-								firstUpdate[j] = true;
+								quadData[j].firstUpdate = true;
 								counter++;
 								exitLoop = true;
 							}
@@ -546,7 +883,7 @@ class Planet {
 		}
 
 		void combineQuad() {
-			for (double k = maxLength / 262144.0; k < maxLength; k *= 2.0) {
+			for (double k = minLength; k < maxLength; k *= 2.0) {
 				for (int i = 0; i < 2048; i++) {
 					if (quadData[i].combine == true && quadData[i].length == k) { ///////////////////////// recombine in order from least length to greatest length, update the quadData member that was just changed
 
@@ -554,6 +891,7 @@ class Planet {
 							&& ((quadData[i].posSquare.z - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0 == floor(((quadData[i].posSquare.z - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0)) {
 
 							quadData[i].draw = false;
+							quadData[i].terrainCalculated = false;
 
 							for (int j = 0; j < 2048; j++) {
 								if (quadData[j].draw == true && quadData[j].length == quadData[i].length) {
@@ -562,16 +900,19 @@ class Planet {
 										quadData[j].subdivide = false;
 										quadData[j].combine = false;
 										quadData[j].draw = false;
+										quadData[j].terrainCalculated = false;
 									}
 									else if (quadData[i].posSquare.x + quadData[i].length * 2.0 == quadData[j].posSquare.x && quadData[i].posSquare.z + quadData[i].length * 2.0 == quadData[j].posSquare.z) {
 										quadData[j].subdivide = false;
 										quadData[j].combine = false;
 										quadData[j].draw = false;
+										quadData[j].terrainCalculated = false;
 									}
 									else if (quadData[i].posSquare.x == quadData[j].posSquare.x && quadData[i].posSquare.z + quadData[i].length * 2.0 == quadData[j].posSquare.z) {
 										quadData[j].subdivide = false;
 										quadData[j].combine = false;
 										quadData[j].draw = false;
+										quadData[j].terrainCalculated = false;
 									}
 
 								}
@@ -602,7 +943,7 @@ class Planet {
 							quadData[i].subdivide = false;
 							quadData[i].combine = false;
 							quadData[i].draw = true;
-							firstUpdate[i] = true;
+							quadData[i].firstUpdate = true;
 							quadData[i].update();
 						}
 					}
@@ -615,301 +956,22 @@ class Planet {
 			combineQuad();
 		}
 
-		class chunk {
-			ID3D11Buffer* indexBuffer;
-			ID3D11Buffer* vertBuffer;
-			XMMATRIX groundWorld;
-
-			PlanetVertex verticesInitial[(chunkLength + 1)*(chunkLength + 1)];
-			PlanetVertex verticesFinal[(chunkLength + 1)*(chunkLength + 1)];
-			DWORD indices[chunkLength*chunkLength * 6];
-
-			D3D11_BUFFER_DESC indexBufferDesc;
-			D3D11_SUBRESOURCE_DATA indexBufferData;
-			D3D11_BUFFER_DESC vertexBufferDesc;
-			D3D11_SUBRESOURCE_DATA initialVertexBufferData;
-			D3D11_MAPPED_SUBRESOURCE updatedVertexBufferData;
-
-		public:
-			double3 firstCamPos;
-
-			void create() {
-
-				counter = 0;
-				for (int z = 0; z < chunkLength + 1; z++) {
-					for (int x = 0; x < chunkLength + 1; x++) {
-						verticesInitial[counter] = PlanetVertex(float(x - chunkLength / 2) / 16.0f, 0.0f, float(z - chunkLength / 2) / 16.0f, float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f);
-						counter++;
-					}
-				}
-
-
-
-				counter = 0;
-
-				for (int x = 0; x < chunkLength; x++) {
-					for (int z = 0; z < chunkLength; z++) {
-						indices[counter] = x + z * (chunkLength + 1);
-						counter++;
-						indices[counter] = x + 1 + z * (chunkLength + 1);
-						counter++;
-						indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1);
-						counter++;
-						indices[counter] = x + z * (chunkLength + 1);
-						counter++;
-						indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1);
-						counter++;
-						indices[counter] = x + (chunkLength + 1) + z * (chunkLength + 1);
-						counter++;
-					}
-				}
-
-				ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
-
-				indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-				indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-				indexBufferDesc.CPUAccessFlags = 0;
-				indexBufferDesc.MiscFlags = 0;
-				indexBufferDesc.ByteWidth = sizeof(indices);
-
-				indexBufferData.pSysMem = indices;
-				d3d11Device->CreateBuffer(&indexBufferDesc, &indexBufferData, &indexBuffer);
-
-				ZeroMemory(&initialVertexBufferData, sizeof(initialVertexBufferData));
-				ZeroMemory(&vertexBufferDesc, sizeof(vertexBufferDesc));
-				ZeroMemory(&updatedVertexBufferData, sizeof(D3D11_MAPPED_SUBRESOURCE));
-
-				vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-				vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-				vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-				vertexBufferDesc.MiscFlags = 0;
-				vertexBufferDesc.ByteWidth = sizeof(verticesInitial);
-
-				initialVertexBufferData.pSysMem = verticesInitial;
-				hr = d3d11Device->CreateBuffer(&vertexBufferDesc, &initialVertexBufferData, &vertBuffer);
-			}
-
-			void update(double3 camPos) {
-				groundWorld = XMMatrixIdentity();
-				Scale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
-				Translation = XMMatrixTranslation(float(firstCamPos.x - camPos.x), float(firstCamPos.y - camPos.y), float(firstCamPos.z - camPos.z));
-				//Translation = XMMatrixTranslation(0.0f, -5.0f, 0.0f);
-				groundWorld = Scale * Translation;
-			}
-
-			double3 position[chunkLength + 1][chunkLength + 1];
-
-			void updateChunkData(quad chunkData) {
-				for (int z = 0; z < (chunkLength + 1); z++) {
-					for (int x = 0; x < (chunkLength + 1); x++) {
-						double3 temp = chunkData.posSquare;
-
-
-
-						temp.x = double(verticesInitial[z * (chunkLength + 1) + x].pos.x) * chunkData.length;
-						temp.y = double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * chunkData.length;
-						temp.z = double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * chunkData.length;
-
-						temp.x += chunkData.posSquare.x;
-						temp.y += chunkData.posSquare.y;
-						temp.z += chunkData.posSquare.z;
-
-
-
-						temp.x /= maxLength;
-						temp.y /= maxLength;
-						temp.z /= maxLength;
-
-						temp = spherize(temp);
-
-
-						double3 tempNormal = temp;
-
-						temp.x *= maxLength;
-						temp.y *= maxLength;
-						temp.z *= maxLength;
-
-						terrainPoint.generateTerrainPoint(tempNormal);
-
-						verticesFinal[z * (chunkLength + 1) + x].height = terrainPoint.height_f;
-						verticesFinal[z * (chunkLength + 1) + x].landTypeHeight = terrainPoint.landTypeHeight_f;
-
-						temp.x += terrainPoint.terrain.x;
-						temp.y += terrainPoint.terrain.y;
-						temp.z += terrainPoint.terrain.z;
-
-
-
-						temp.x = temp.x - firstCamPos.x;
-						temp.y = temp.y - firstCamPos.y;
-						temp.z = temp.z - firstCamPos.z;
-
-						position[x][z] = temp;
-
-						verticesFinal[z * (chunkLength + 1) + x].pos = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
-						verticesFinal[z * (chunkLength + 1) + x].texCoord = XMFLOAT2(float(double(verticesInitial[z * (chunkLength + 1) + x].pos.x) * chunkData.length), float(double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * chunkData.length));
-					}
-				}
-
-				double3 V;
-				double3 W;
-				double3 f_normals[2][chunkLength][chunkLength];
-				double3 normals[chunkLength + 1][chunkLength + 1];
-
-				counter = 0;
-				for (int z = 0; z < chunkLength; z++) {
-					for (int x = 0; x < chunkLength; x++) {
-						for (int i = 0; i < 2; i++) {
-							if (i == 0) {
-								V.x = position[x + 1][z + 1].x - position[x][z].x;
-								V.y = position[x + 1][z + 1].y - position[x][z].y;
-								V.z = position[x + 1][z + 1].z - position[x][z].z;
-								W.x = position[x + 1][z].x - position[x][z].x;
-								W.y = position[x + 1][z].y - position[x][z].y;
-								W.z = position[x + 1][z].z - position[x][z].z;
-							}
-							if (i == 1) {
-								V.x = position[x + 1][z + 1].x - position[x][z].x;
-								V.y = position[x + 1][z + 1].y - position[x][z].y;
-								V.z = position[x + 1][z + 1].z - position[x][z].z;
-								W.x = position[x][z + 1].x - position[x][z].x;
-								W.y = position[x][z + 1].y - position[x][z].y;
-								W.z = position[x][z + 1].z - position[x][z].z;
-							}
-							f_normals[i][x][z].x = (V.y*W.z) - (V.z*W.y);
-							f_normals[i][x][z].y = (V.z*W.x) - (V.x*W.z);
-							f_normals[i][x][z].z = (V.x*W.y) - (V.y*W.x);
-							f_normals[i][x][z] = normalize(f_normals[i][x][z]);
-							if (chunkData.posSquare.y >= 0.0) {
-								if (f_normals[i][x][z].y < 0.0) {
-									f_normals[i][x][z].x *= -1;
-									f_normals[i][x][z].y *= -1;
-									f_normals[i][x][z].z *= -1;
-								}
-							}
-							else if (chunkData.posSquare.y < 0.0) {
-								if (f_normals[i][x][z].y > 0.0) {
-									f_normals[i][x][z].x *= -1;
-									f_normals[i][x][z].y *= -1;
-									f_normals[i][x][z].z *= -1;
-								}
-							}
-						}
-					}
-				}
-				//*
-				for (int z = 0; z < chunkLength + 1; z++) {
-					for (int x = 0; x < chunkLength + 1; x++) {
-						if (x != 0 && z != 0 && x != chunkLength && z != chunkLength) {
-							normals[x][z].x = ((f_normals[0][x - 1][z - 1].x + f_normals[1][x - 1][z - 1].x) / 2 + f_normals[0][x - 1][z].x + (f_normals[0][x][z].x + f_normals[1][x][z].x) / 2 + f_normals[1][x][z - 1].x) / 4;
-							normals[x][z].y = ((f_normals[0][x - 1][z - 1].y + f_normals[1][x - 1][z - 1].y) / 2 + f_normals[0][x - 1][z].y + (f_normals[0][x][z].y + f_normals[1][x][z].y) / 2 + f_normals[1][x][z - 1].y) / 4;
-							normals[x][z].z = ((f_normals[0][x - 1][z - 1].z + f_normals[1][x - 1][z - 1].z) / 2 + f_normals[0][x - 1][z].z + (f_normals[0][x][z].z + f_normals[1][x][z].z) / 2 + f_normals[1][x][z - 1].z) / 4;
-							normals[x][z] = normalize(normals[x][z]);
-						}
-						else if (x == chunkLength) {////////////CHANGE//////////////
-							normals[x][z].x = f_normals[0][x - 1][z].x + f_normals[1][x - 1][z].x;
-							normals[x][z].y = f_normals[0][x - 1][z].y + f_normals[1][x - 1][z].y;
-							normals[x][z].z = f_normals[0][x - 1][z].z + f_normals[1][x - 1][z].z;
-							normals[x][z] = normalize(normals[x][z]);
-						}
-						else if (z == chunkLength) {
-							normals[x][z].x = f_normals[0][x][z - 1].x + f_normals[1][x][z - 1].x;
-							normals[x][z].y = f_normals[0][x][z - 1].y + f_normals[1][x][z - 1].y;
-							normals[x][z].z = f_normals[0][x][z - 1].z + f_normals[1][x][z - 1].z;
-							normals[x][z] = normalize(normals[x][z]);
-						}
-						else {////////////CHANGE//////////////
-							normals[x][z].x = f_normals[0][x][z].x + f_normals[1][x][z].x;
-							normals[x][z].y = f_normals[0][x][z].y + f_normals[1][x][z].y;
-							normals[x][z].z = f_normals[0][x][z].z + f_normals[1][x][z].z;
-							normals[x][z] = normalize(normals[x][z]);
-						}
-						verticesFinal[z * (chunkLength + 1) + x].normal = XMFLOAT3(float(normals[x][z].x), float(normals[x][z].y), float(normals[x][z].z));
-					}
-				}
-				//*/
-				/*
-				for (int z = 0; z < chunkLength + 1; z++) {
-					for (int x = 0; x < chunkLength + 1; x++) {
-						if (x != chunkLength && z != chunkLength) {
-							normals[x][z].x = f_normals[0][x][z].x + f_normals[1][x][z].x;
-							normals[x][z].y = f_normals[0][x][z].y + f_normals[1][x][z].y;
-							normals[x][z].z = f_normals[0][x][z].z + f_normals[1][x][z].z;
-							normals[x][z] = normalize(normals[x][z]);
-						}
-						else if (x == chunkLength) {////////////CHANGE//////////////
-							normals[x][z].x = f_normals[0][x-1][z].x + f_normals[1][x-1][z].x;
-							normals[x][z].y = f_normals[0][x-1][z].y + f_normals[1][x-1][z].y;
-							normals[x][z].z = f_normals[0][x-1][z].z + f_normals[1][x-1][z].z;
-						}
-						else {
-							normals[x][z].x = f_normals[0][x][z-1].x + f_normals[1][x][z-1].x;
-							normals[x][z].y = f_normals[0][x][z-1].y + f_normals[1][x][z-1].x;
-							normals[x][z].z = f_normals[0][x][z-1].z + f_normals[1][x][z-1].x;
-						}
-						verticesFinal[z * (chunkLength + 1) + x].normal = XMFLOAT3(float(normals[x][z].x), float(normals[x][z].y), float(normals[x][z].z));
-					}
-				}
-				//*/
-
-				d3d11DevCon->Map(vertBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &updatedVertexBufferData);
-				memcpy(updatedVertexBufferData.pData, verticesFinal, sizeof(verticesFinal));
-				d3d11DevCon->Unmap(vertBuffer, 0);
-			}
-
-			void draw() {
-				//Set Vertex and Pixel Shaders
-				d3d11DevCon->VSSetShader(PLANET_VS, 0, 0);
-				d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
-
-				//Set the Input Layout
-				d3d11DevCon->IASetInputLayout(planetLayout);
-
-				UINT stride = sizeof(PlanetVertex);
-				UINT offset = 0;
-
-				d3d11DevCon->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-				d3d11DevCon->IASetVertexBuffers(0, 1, &vertBuffer, &stride, &offset);
-
-				//Set the WVP matrix and send it to the constant buffer in effect file
-				//WVP = groundWorld * camView * camProjection;
-				WVP = groundWorld * camView * planetCamProjection;
-				cbPerObj.WVP = XMMatrixTranspose(WVP);
-				cbPerObj.World = XMMatrixTranspose(groundWorld);
-				d3d11DevCon->UpdateSubresource(cbPerObjectBuffer, 0, NULL, &cbPerObj, 0, 0);
-				d3d11DevCon->VSSetConstantBuffers(0, 1, &cbPerObjectBuffer);
-				d3d11DevCon->PSSetShaderResources(0, 1, &texture[0]);
-				d3d11DevCon->PSSetShaderResources(1, 1, &texture[2]);
-				d3d11DevCon->PSSetShaderResources(2, 1, &texture[8]);
-				d3d11DevCon->PSSetSamplers(0, 1, &CubesTexSamplerState);
-
-				d3d11DevCon->RSSetState(RSCullNone);
-				//d3d11DevCon->RSSetState(Wireframe);
-				d3d11DevCon->DrawIndexed(chunkLength*chunkLength * 6, 0, 0);
-			}
-
-			void cleanUp() {
-				vertBuffer->Release();
-				indexBuffer->Release();
-			}
-		}sideChunks[2048];
-
 		void create(double squarePos_y) {
 			squarePosY = squarePos_y;
 
 			for (int i = 0; i < 2048; i++) {
 				quadData[i].draw = false;
-				firstUpdate[i] = false;
+				quadData[i].terrainCalculated = false;
+				quadData[i].firstUpdate = false;
 			}
 			quadData[0].draw = true;
-			firstUpdate[0] = true;
+			quadData[0].firstUpdate = true;
 
-			quadData[0] = quad(double3(0.0, squarePosY, 0.0), double3(0.0, squarePosY, 0.0), maxLength);
+			quadData[0] = Quad(double3(0.0, squarePosY, 0.0), double3(0.0, squarePosY, 0.0), maxLength);
 			quadData[0].update();
 
-
 			for (int i = 0; i < 2048; i++)
-				sideChunks[i].create();
+				quadData[i].create('y');
 		}
 
 		void update(double3 camPos) {
@@ -926,14 +988,14 @@ class Planet {
 				if (quadData[i].draw == true) {
 					quadData[i].update();
 
-					if (firstUpdate[i] == true) {
-						sideChunks[i].firstCamPos = camPos;
-						sideChunks[i].updateChunkData(quadData[i]);
+					if (quadData[i].firstUpdate == true) {
+						quadData[i].firstCamPos = camPos;
+						quadData[i].updateChunkData('y');
 
-						firstUpdate[i] = false;
+						quadData[i].firstUpdate = false;
 					}
 
-					sideChunks[i].update(camPos);
+					quadData[i].transform(camPos);
 				}
 			}
 		}
@@ -945,25 +1007,22 @@ class Planet {
 
 			for (int i = 0; i < 2048; i++) {
 				if (quadData[i].draw == true && quadData[i].distance < eyeRange) {
-					sideChunks[i].draw();
+					quadData[i].drawTerrain();
 				}
 			}
 		}
 
 		void cleanUp() {
 			for (int i = 0; i < 2048; i++)
-				sideChunks[i].cleanUp();
+				quadData[i].cleanUp();
 		}
 
 	}sideY0, sideY1;
 
 
-	class sideX {
-		quad quadData[2048];
-		bool firstUpdate[2048];
-		int numInstances;
-
+	class SideX {
 	public:
+		Quad quadData[2048];
 		double squarePosX;
 
 		void subdivideQuad() {
@@ -972,9 +1031,10 @@ class Planet {
 				if (quadData[i].subdivide == true && exitLoop == false) {
 
 					quadData[i].draw = false;
+					quadData[i].terrainCalculated = false;
 					quadData[i].subdivide = false;
 					quadData[i].combine = false;
-					quad temp = quadData[i];
+					Quad temp = quadData[i];
 					counter = 0;
 
 					for (int j = 0; j < 2048; j++) {
@@ -1002,7 +1062,7 @@ class Planet {
 								quadData[j].subdivide = false;
 								quadData[j].combine = false;
 								quadData[j].draw = true;
-								firstUpdate[j] = true;
+								quadData[j].firstUpdate = true;
 								counter++;
 							}
 							else if (counter == 1) {
@@ -1028,7 +1088,7 @@ class Planet {
 								quadData[j].subdivide = false;
 								quadData[j].combine = false;
 								quadData[j].draw = true;
-								firstUpdate[j] = true;
+								quadData[j].firstUpdate = true;
 								counter++;
 							}
 							else if (counter == 2) {
@@ -1054,7 +1114,7 @@ class Planet {
 								quadData[j].subdivide = false;
 								quadData[j].combine = false;
 								quadData[j].draw = true;
-								firstUpdate[j] = true;
+								quadData[j].firstUpdate = true;
 								counter++;
 							}
 							else if (counter == 3) {
@@ -1080,7 +1140,7 @@ class Planet {
 								quadData[j].subdivide = false;
 								quadData[j].combine = false;
 								quadData[j].draw = true;
-								firstUpdate[j] = true;
+								quadData[j].firstUpdate = true;
 								counter++;
 								exitLoop = true;
 							}
@@ -1091,7 +1151,7 @@ class Planet {
 		}
 
 		void combineQuad() {
-			for (double k = maxLength / 262144.0; k < maxLength; k *= 2.0) {
+			for (double k = minLength; k < maxLength; k *= 2.0) {
 				for (int i = 0; i < 2048; i++) {
 					if (quadData[i].combine == true && quadData[i].length == k) { ///////////////////////// recombine in order from least length to greatest length, update the quadData member that was just changed
 
@@ -1099,6 +1159,7 @@ class Planet {
 							&& ((quadData[i].posSquare.z - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0 == floor(((quadData[i].posSquare.z - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0)) {
 
 							quadData[i].draw = false;
+							quadData[i].terrainCalculated = false;
 
 							for (int j = 0; j < 2048; j++) {
 								if (quadData[j].length == quadData[i].length) {
@@ -1106,14 +1167,17 @@ class Planet {
 									if (quadData[i].posSquare.y + quadData[i].length * 2.0 == quadData[j].posSquare.y && quadData[i].posSquare.z == quadData[j].posSquare.z) {
 										quadData[j].combine = false;
 										quadData[j].draw = false;
+										quadData[j].terrainCalculated = false;
 									}
 									else if (quadData[i].posSquare.y + quadData[i].length * 2.0 == quadData[j].posSquare.y && quadData[i].posSquare.z + quadData[i].length * 2.0 == quadData[j].posSquare.z) {
 										quadData[j].combine = false;
 										quadData[j].draw = false;
+										quadData[j].terrainCalculated = false;
 									}
 									else if (quadData[i].posSquare.y == quadData[j].posSquare.y && quadData[i].posSquare.z + quadData[i].length * 2.0 == quadData[j].posSquare.z) {
 										quadData[j].combine = false;
 										quadData[j].draw = false;
+										quadData[j].terrainCalculated = false;
 									}
 
 								}
@@ -1143,7 +1207,7 @@ class Planet {
 							quadData[i].subdivide = false;
 							quadData[i].combine = false;
 							quadData[i].draw = true;
-							firstUpdate[i] = true;
+							quadData[i].firstUpdate = true;
 							quadData[i].update();
 						}
 					}
@@ -1156,276 +1220,23 @@ class Planet {
 			combineQuad();
 		}
 
-
-
-
-		class chunk {
-			ID3D11Buffer* indexBuffer;
-			ID3D11Buffer* vertBuffer;
-			XMMATRIX groundWorld;
-
-			PlanetVertex verticesInitial[(chunkLength + 1)*(chunkLength + 1)];
-			PlanetVertex verticesFinal[(chunkLength + 1)*(chunkLength + 1)];
-			DWORD indices[chunkLength*chunkLength * 6];
-
-			D3D11_BUFFER_DESC indexBufferDesc;
-			D3D11_SUBRESOURCE_DATA indexBufferData;
-			D3D11_BUFFER_DESC vertexBufferDesc;
-			D3D11_SUBRESOURCE_DATA initialVertexBufferData;
-			D3D11_MAPPED_SUBRESOURCE updatedVertexBufferData;
-
-		public:
-			double3 firstCamPos;
-
-			void create() {
-
-				counter = 0;
-				for (int z = 0; z < chunkLength + 1; z++) {
-					for (int x = 0; x < chunkLength + 1; x++) {
-						verticesInitial[counter] = PlanetVertex(0.0f, float(z - chunkLength / 2) / 16.0f, float(x - chunkLength / 2) / 16.0f, float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-						counter++;
-					}
-				}
-
-
-
-				counter = 0;
-
-				for (int x = 0; x < chunkLength; x++) {
-					for (int z = 0; z < chunkLength; z++) {
-						indices[counter] = x + z * (chunkLength + 1);
-						counter++;
-						indices[counter] = x + 1 + z * (chunkLength + 1);
-						counter++;
-						indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1);
-						counter++;
-						indices[counter] = x + z * (chunkLength + 1);
-						counter++;
-						indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1);
-						counter++;
-						indices[counter] = x + (chunkLength + 1) + z * (chunkLength + 1);
-						counter++;
-					}
-				}
-
-				ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
-
-				indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-				indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-				indexBufferDesc.CPUAccessFlags = 0;
-				indexBufferDesc.MiscFlags = 0;
-				indexBufferDesc.ByteWidth = sizeof(indices);
-
-				indexBufferData.pSysMem = indices;
-				d3d11Device->CreateBuffer(&indexBufferDesc, &indexBufferData, &indexBuffer);
-
-				ZeroMemory(&initialVertexBufferData, sizeof(initialVertexBufferData));
-				ZeroMemory(&vertexBufferDesc, sizeof(vertexBufferDesc));
-				ZeroMemory(&updatedVertexBufferData, sizeof(D3D11_MAPPED_SUBRESOURCE));
-
-				vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-				vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-				vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-				vertexBufferDesc.MiscFlags = 0;
-				vertexBufferDesc.ByteWidth = sizeof(verticesInitial);
-
-				initialVertexBufferData.pSysMem = verticesInitial;
-				hr = d3d11Device->CreateBuffer(&vertexBufferDesc, &initialVertexBufferData, &vertBuffer);
-			}
-
-			void update(double3 camPos) {
-				groundWorld = XMMatrixIdentity();
-				Scale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
-				Translation = XMMatrixTranslation(float(firstCamPos.x - camPos.x), float(firstCamPos.y - camPos.y), float(firstCamPos.z - camPos.z));
-				//Translation = XMMatrixTranslation(0.0f, -5.0f, 0.0f);
-				groundWorld = Scale * Translation;
-			}
-
-			double3 position[chunkLength + 1][chunkLength + 1];
-
-			void updateChunkData(quad chunkData) {
-				for (int z = 0; z < (chunkLength + 1); z++) {
-					for (int x = 0; x < (chunkLength + 1); x++) {
-						double3 temp = chunkData.posSquare;
-
-
-
-						temp.x = double(verticesInitial[z * (chunkLength + 1) + x].pos.x) * chunkData.length;
-						temp.y = double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * chunkData.length;
-						temp.z = double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * chunkData.length;
-
-						temp.x += chunkData.posSquare.x;
-						temp.y += chunkData.posSquare.y;
-						temp.z += chunkData.posSquare.z;
-
-						temp.x /= maxLength;
-						temp.y /= maxLength;
-						temp.z /= maxLength;
-
-						temp = spherize(temp);
-
-
-						double3 tempNormal = temp;
-
-						temp.x *= maxLength;
-						temp.y *= maxLength;
-						temp.z *= maxLength;
-
-						terrainPoint.generateTerrainPoint(tempNormal);
-
-						verticesFinal[z * (chunkLength + 1) + x].height = terrainPoint.height_f;
-						verticesFinal[z * (chunkLength + 1) + x].landTypeHeight = terrainPoint.landTypeHeight_f;
-
-						temp.x += terrainPoint.terrain.x;
-						temp.y += terrainPoint.terrain.y;
-						temp.z += terrainPoint.terrain.z;
-
-						temp.x = temp.x - firstCamPos.x;
-						temp.y = temp.y - firstCamPos.y;
-						temp.z = temp.z - firstCamPos.z;
-
-						position[x][z] = temp;
-
-						verticesFinal[z * (chunkLength + 1) + x].pos = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
-						verticesFinal[z * (chunkLength + 1) + x].texCoord = XMFLOAT2(float(double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * chunkData.length), float(double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * chunkData.length));
-					}
-				}
-				double3 V;
-				double3 W;
-				double3 f_normals[2][chunkLength][chunkLength];
-				double3 normals[chunkLength + 1][chunkLength + 1];
-
-				counter = 0;
-				for (int z = 0; z < chunkLength; z++) {
-					for (int x = 0; x < chunkLength; x++) {
-						for (int i = 0; i < 2; i++) {
-							if (i == 0) {
-								V.x = position[x + 1][z + 1].x - position[x][z].x;
-								V.y = position[x + 1][z + 1].y - position[x][z].y;
-								V.z = position[x + 1][z + 1].z - position[x][z].z;
-								W.x = position[x + 1][z].x - position[x][z].x;
-								W.y = position[x + 1][z].y - position[x][z].y;
-								W.z = position[x + 1][z].z - position[x][z].z;
-							}
-							if (i == 1) {
-								V.x = position[x + 1][z + 1].x - position[x][z].x;
-								V.y = position[x + 1][z + 1].y - position[x][z].y;
-								V.z = position[x + 1][z + 1].z - position[x][z].z;
-								W.x = position[x][z + 1].x - position[x][z].x;
-								W.y = position[x][z + 1].y - position[x][z].y;
-								W.z = position[x][z + 1].z - position[x][z].z;
-							}
-							f_normals[i][x][z].x = (V.y*W.z) - (V.z*W.y);
-							f_normals[i][x][z].y = (V.z*W.x) - (V.x*W.z);
-							f_normals[i][x][z].z = (V.x*W.y) - (V.y*W.x);
-							f_normals[i][x][z] = normalize(f_normals[i][x][z]);
-							if (chunkData.posSquare.x >= 0.0) {
-								if (f_normals[i][x][z].x < 0.0) {
-									f_normals[i][x][z].x *= -1;
-									f_normals[i][x][z].y *= -1;
-									f_normals[i][x][z].z *= -1;
-								}
-							}
-							else if (chunkData.posSquare.x < 0.0) {
-								if (f_normals[i][x][z].x > 0.0) {
-									f_normals[i][x][z].x *= -1;
-									f_normals[i][x][z].y *= -1;
-									f_normals[i][x][z].z *= -1;
-								}
-							}
-						}
-					}
-				}
-				//*
-				for (int z = 0; z < chunkLength + 1; z++) {
-					for (int x = 0; x < chunkLength + 1; x++) {
-						if (x != 0 && z != 0 && x != chunkLength && z != chunkLength) {
-							normals[x][z].x = ((f_normals[0][x - 1][z - 1].x + f_normals[1][x - 1][z - 1].x) / 2 + f_normals[0][x - 1][z].x + (f_normals[0][x][z].x + f_normals[1][x][z].x) / 2 + f_normals[1][x][z - 1].x) / 4;
-							normals[x][z].y = ((f_normals[0][x - 1][z - 1].y + f_normals[1][x - 1][z - 1].y) / 2 + f_normals[0][x - 1][z].y + (f_normals[0][x][z].y + f_normals[1][x][z].y) / 2 + f_normals[1][x][z - 1].y) / 4;
-							normals[x][z].z = ((f_normals[0][x - 1][z - 1].z + f_normals[1][x - 1][z - 1].z) / 2 + f_normals[0][x - 1][z].z + (f_normals[0][x][z].z + f_normals[1][x][z].z) / 2 + f_normals[1][x][z - 1].z) / 4;
-							normals[x][z] = normalize(normals[x][z]);
-						}
-						else if (x == chunkLength) {////////////CHANGE//////////////
-							normals[x][z].x = f_normals[0][x - 1][z].x + f_normals[1][x - 1][z].x;
-							normals[x][z].y = f_normals[0][x - 1][z].y + f_normals[1][x - 1][z].y;
-							normals[x][z].z = f_normals[0][x - 1][z].z + f_normals[1][x - 1][z].z;
-							normals[x][z] = normalize(normals[x][z]);
-						}
-						else if (z == chunkLength) {
-							normals[x][z].x = f_normals[0][x][z - 1].x + f_normals[1][x][z - 1].x;
-							normals[x][z].y = f_normals[0][x][z - 1].y + f_normals[1][x][z - 1].y;
-							normals[x][z].z = f_normals[0][x][z - 1].z + f_normals[1][x][z - 1].z;
-							normals[x][z] = normalize(normals[x][z]);
-						}
-						else {////////////CHANGE//////////////
-							normals[x][z].x = f_normals[0][x][z].x + f_normals[1][x][z].x;
-							normals[x][z].y = f_normals[0][x][z].y + f_normals[1][x][z].y;
-							normals[x][z].z = f_normals[0][x][z].z + f_normals[1][x][z].z;
-							normals[x][z] = normalize(normals[x][z]);
-						}
-						verticesFinal[z * (chunkLength + 1) + x].normal = XMFLOAT3(float(normals[x][z].x), float(normals[x][z].y), float(normals[x][z].z));
-					}
-				}
-
-
-				d3d11DevCon->Map(vertBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &updatedVertexBufferData);
-				memcpy(updatedVertexBufferData.pData, verticesFinal, sizeof(verticesFinal));
-				d3d11DevCon->Unmap(vertBuffer, 0);
-			}
-
-			void draw() {
-				//Set Vertex and Pixel Shaders
-				d3d11DevCon->VSSetShader(PLANET_VS, 0, 0);
-				d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
-
-				//Set the Input Layout
-				d3d11DevCon->IASetInputLayout(planetLayout);
-
-				UINT stride = sizeof(PlanetVertex);
-				UINT offset = 0;
-
-				d3d11DevCon->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-				d3d11DevCon->IASetVertexBuffers(0, 1, &vertBuffer, &stride, &offset);
-
-				//Set the WVP matrix and send it to the constant buffer in effect file
-				//WVP = groundWorld * camView * camProjection;
-				WVP = groundWorld * camView * planetCamProjection;
-				cbPerObj.WVP = XMMatrixTranspose(WVP);
-				cbPerObj.World = XMMatrixTranspose(groundWorld);
-				d3d11DevCon->UpdateSubresource(cbPerObjectBuffer, 0, NULL, &cbPerObj, 0, 0);
-				d3d11DevCon->VSSetConstantBuffers(0, 1, &cbPerObjectBuffer);
-				d3d11DevCon->PSSetShaderResources(0, 1, &texture[0]);
-				d3d11DevCon->PSSetShaderResources(1, 1, &texture[2]);
-				d3d11DevCon->PSSetShaderResources(2, 1, &texture[8]);
-				d3d11DevCon->PSSetSamplers(0, 1, &CubesTexSamplerState);
-
-				d3d11DevCon->RSSetState(RSCullNone);
-				//d3d11DevCon->RSSetState(Wireframe);
-				d3d11DevCon->DrawIndexed(chunkLength*chunkLength * 6, 0, 0);
-			}
-
-			void cleanUp() {
-				vertBuffer->Release();
-				indexBuffer->Release();
-			}
-		}sideChunks[2048];
-
 		void create(double squarePos_x) {
 			squarePosX = squarePos_x;
 
 			for (int i = 0; i < 2048; i++) {
 				quadData[i].draw = false;
-				firstUpdate[i] = false;
+				quadData[i].terrainCalculated = false;
+				quadData[i].firstUpdate = false;
 			}
 			quadData[0].draw = true;
-			firstUpdate[0] = true;
+			quadData[0].firstUpdate = true;
 
-			quadData[0] = quad(double3(squarePosX, 0.0, 0.0), double3(squarePosX, 0.0, 0.0), maxLength);
+			quadData[0] = Quad(double3(squarePosX, 0.0, 0.0), double3(squarePosX, 0.0, 0.0), maxLength);
 			quadData[0].update();
 
 
 			for (int i = 0; i < 2048; i++)
-				sideChunks[i].create();
+				quadData[i].create('x');
 		}
 
 		void update(double3 camPos) {
@@ -1442,14 +1253,14 @@ class Planet {
 				if (quadData[i].draw == true) {
 					quadData[i].update();
 
-					if (firstUpdate[i] == true) {
-						sideChunks[i].firstCamPos = camPos;
-						sideChunks[i].updateChunkData(quadData[i]);
+					if (quadData[i].firstUpdate == true) {
+						quadData[i].firstCamPos = camPos;
+						quadData[i].updateChunkData('x');
 
-						firstUpdate[i] = false;
+						quadData[i].firstUpdate = false;
 					}
 
-					sideChunks[i].update(camPos);
+					quadData[i].transform(camPos);
 				}
 			}
 		}
@@ -1461,25 +1272,22 @@ class Planet {
 
 			for (int i = 0; i < 2048; i++) {
 				if (quadData[i].draw == true && quadData[i].distance < eyeRange) {
-					sideChunks[i].draw();
+					quadData[i].drawTerrain();
 				}
 			}
 		}
 
 		void cleanUp() {
 			for (int i = 0; i < 2048; i++)
-				sideChunks[i].cleanUp();
+				quadData[i].cleanUp();
 		}
 
 	}sideX0, sideX1;
 
 
-	class sideZ {
-		quad quadData[2048];
-		bool firstUpdate[2048];
-		int numInstances;
-
+	class SideZ {
 	public:
+		Quad quadData[2048];
 		double squarePosZ;
 
 		void subdivideQuad() {
@@ -1488,9 +1296,10 @@ class Planet {
 				if (quadData[i].subdivide == true && exitLoop == false) {
 
 					quadData[i].draw = false;
+					quadData[i].terrainCalculated = false;
 					quadData[i].subdivide = false;
 					quadData[i].combine = false;
-					quad temp = quadData[i];
+					Quad temp = quadData[i];
 					counter = 0;
 
 					for (int j = 0; j < 2048; j++) {
@@ -1518,7 +1327,7 @@ class Planet {
 								quadData[j].subdivide = false;
 								quadData[j].combine = false;
 								quadData[j].draw = true;
-								firstUpdate[j] = true;
+								quadData[j].firstUpdate = true;
 								counter++;
 							}
 							else if (counter == 1) {
@@ -1544,7 +1353,7 @@ class Planet {
 								quadData[j].subdivide = false;
 								quadData[j].combine = false;
 								quadData[j].draw = true;
-								firstUpdate[j] = true;
+								quadData[j].firstUpdate = true;
 								counter++;
 							}
 							else if (counter == 2) {
@@ -1570,7 +1379,7 @@ class Planet {
 								quadData[j].subdivide = false;
 								quadData[j].combine = false;
 								quadData[j].draw = true;
-								firstUpdate[j] = true;
+								quadData[j].firstUpdate = true;
 								counter++;
 							}
 							else if (counter == 3) {
@@ -1596,7 +1405,7 @@ class Planet {
 								quadData[j].subdivide = false;
 								quadData[j].combine = false;
 								quadData[j].draw = true;
-								firstUpdate[j] = true;
+								quadData[j].firstUpdate = true;
 								counter++;
 								exitLoop = true;
 							}
@@ -1607,7 +1416,7 @@ class Planet {
 		}
 
 		void combineQuad() {
-			for (double k = maxLength / 262144.0; k < maxLength; k *= 2.0) {
+			for (double k = minLength; k < maxLength; k *= 2.0) {
 				for (int i = 0; i < 2048; i++) {
 					if (quadData[i].combine == true && quadData[i].length == k) { ///////////////////////// recombine in order from least length to greatest length, update the quadData member that was just changed
 
@@ -1615,6 +1424,7 @@ class Planet {
 							&& ((quadData[i].posSquare.y - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0 == floor(((quadData[i].posSquare.y - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0)) {
 
 							quadData[i].draw = false;
+							quadData[i].terrainCalculated = false;
 
 							for (int j = 0; j < 2048; j++) {
 								if (quadData[j].draw == true && quadData[j].length == quadData[i].length) {
@@ -1622,14 +1432,17 @@ class Planet {
 									if (quadData[i].posSquare.x + quadData[i].length * 2.0 == quadData[j].posSquare.x && quadData[i].posSquare.y == quadData[j].posSquare.y) {
 										quadData[j].combine = false;
 										quadData[j].draw = false;
+										quadData[j].terrainCalculated = false;
 									}
 									else if (quadData[i].posSquare.x + quadData[i].length * 2.0 == quadData[j].posSquare.x && quadData[i].posSquare.y + quadData[i].length * 2.0 == quadData[j].posSquare.y) {
 										quadData[j].combine = false;
 										quadData[j].draw = false;
+										quadData[j].terrainCalculated = false;
 									}
 									else if (quadData[i].posSquare.x == quadData[j].posSquare.x && quadData[i].posSquare.y + quadData[i].length * 2.0 == quadData[j].posSquare.y) {
 										quadData[j].combine = false;
 										quadData[j].draw = false;
+										quadData[j].terrainCalculated = false;
 									}
 
 								}
@@ -1659,7 +1472,7 @@ class Planet {
 							quadData[i].subdivide = false;
 							quadData[i].combine = false;
 							quadData[i].draw = true;
-							firstUpdate[i] = true;
+							quadData[i].firstUpdate = true;
 							quadData[i].update();
 						}
 					}
@@ -1672,276 +1485,22 @@ class Planet {
 			combineQuad();
 		}
 
-
-
-
-		class chunk {
-			ID3D11Buffer* indexBuffer;
-			ID3D11Buffer* vertBuffer;
-			XMMATRIX groundWorld;
-
-			PlanetVertex verticesInitial[(chunkLength + 1)*(chunkLength + 1)];
-			PlanetVertex verticesFinal[(chunkLength + 1)*(chunkLength + 1)];
-			DWORD indices[chunkLength*chunkLength * 6];
-
-			D3D11_BUFFER_DESC indexBufferDesc;
-			D3D11_SUBRESOURCE_DATA indexBufferData;
-			D3D11_BUFFER_DESC vertexBufferDesc;
-			D3D11_SUBRESOURCE_DATA initialVertexBufferData;
-			D3D11_MAPPED_SUBRESOURCE updatedVertexBufferData;
-
-		public:
-			double3 firstCamPos;
-
-			void create() {
-
-				counter = 0;
-				for (int z = 0; z < chunkLength + 1; z++) {
-					for (int x = 0; x < chunkLength + 1; x++) {
-						verticesInitial[counter] = PlanetVertex(float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 0.0f, float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
-						counter++;
-					}
-				}
-
-
-
-				counter = 0;
-
-				for (int x = 0; x < chunkLength; x++) {
-					for (int z = 0; z < chunkLength; z++) {
-						indices[counter] = x + z * (chunkLength + 1);
-						counter++;
-						indices[counter] = x + 1 + z * (chunkLength + 1);
-						counter++;
-						indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1);
-						counter++;
-						indices[counter] = x + z * (chunkLength + 1);
-						counter++;
-						indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1);
-						counter++;
-						indices[counter] = x + (chunkLength + 1) + z * (chunkLength + 1);
-						counter++;
-					}
-				}
-
-				ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
-
-				indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-				indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-				indexBufferDesc.CPUAccessFlags = 0;
-				indexBufferDesc.MiscFlags = 0;
-				indexBufferDesc.ByteWidth = sizeof(indices);
-
-				indexBufferData.pSysMem = indices;
-				d3d11Device->CreateBuffer(&indexBufferDesc, &indexBufferData, &indexBuffer);
-
-				ZeroMemory(&initialVertexBufferData, sizeof(initialVertexBufferData));
-				ZeroMemory(&vertexBufferDesc, sizeof(vertexBufferDesc));
-				ZeroMemory(&updatedVertexBufferData, sizeof(D3D11_MAPPED_SUBRESOURCE));
-
-				vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-				vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-				vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-				vertexBufferDesc.MiscFlags = 0;
-				vertexBufferDesc.ByteWidth = sizeof(verticesInitial);
-
-				initialVertexBufferData.pSysMem = verticesInitial;
-				hr = d3d11Device->CreateBuffer(&vertexBufferDesc, &initialVertexBufferData, &vertBuffer);
-			}
-
-			void update(double3 camPos) {
-				groundWorld = XMMatrixIdentity();
-				Scale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
-				Translation = XMMatrixTranslation(float(firstCamPos.x - camPos.x), float(firstCamPos.y - camPos.y), float(firstCamPos.z - camPos.z));
-				//Translation = XMMatrixTranslation(0.0f, -5.0f, 0.0f);
-				groundWorld = Scale * Translation;
-			}
-
-			double3 position[chunkLength + 1][chunkLength + 1];
-
-			void updateChunkData(quad chunkData) {
-				for (int z = 0; z < (chunkLength + 1); z++) {
-					for (int x = 0; x < (chunkLength + 1); x++) {
-						double3 temp = chunkData.posSquare;
-
-
-
-						temp.x = double(verticesInitial[z * (chunkLength + 1) + x].pos.x) * chunkData.length;
-						temp.y = double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * chunkData.length;
-						temp.z = double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * chunkData.length;
-
-						temp.x += chunkData.posSquare.x;
-						temp.y += chunkData.posSquare.y;
-						temp.z += chunkData.posSquare.z;
-
-						temp.x /= maxLength;
-						temp.y /= maxLength;
-						temp.z /= maxLength;
-
-						temp = spherize(temp);
-
-
-						double3 tempNormal = temp;
-
-						temp.x *= maxLength;
-						temp.y *= maxLength;
-						temp.z *= maxLength;
-
-						terrainPoint.generateTerrainPoint(tempNormal);
-
-						verticesFinal[z * (chunkLength + 1) + x].height = terrainPoint.height_f;
-						verticesFinal[z * (chunkLength + 1) + x].landTypeHeight = terrainPoint.landTypeHeight_f;
-
-						temp.x += terrainPoint.terrain.x;
-						temp.y += terrainPoint.terrain.y;
-						temp.z += terrainPoint.terrain.z;
-
-						temp.x = temp.x - firstCamPos.x;
-						temp.y = temp.y - firstCamPos.y;
-						temp.z = temp.z - firstCamPos.z;
-
-						position[x][z] = temp;
-
-						verticesFinal[z * (chunkLength + 1) + x].pos = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
-						verticesFinal[z * (chunkLength + 1) + x].texCoord = XMFLOAT2(float(double(verticesInitial[z * (chunkLength + 1) + x].pos.x) * chunkData.length), float(double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * chunkData.length));
-					}
-				}
-
-				double3 V;
-				double3 W;
-				double3 f_normals[2][chunkLength][chunkLength];
-				double3 normals[chunkLength + 1][chunkLength + 1];
-
-				counter = 0;
-				for (int z = 0; z < chunkLength; z++) {
-					for (int x = 0; x < chunkLength; x++) {
-						for (int i = 0; i < 2; i++) {
-							if (i == 0) {
-								V.x = position[x + 1][z + 1].x - position[x][z].x;
-								V.y = position[x + 1][z + 1].y - position[x][z].y;
-								V.z = position[x + 1][z + 1].z - position[x][z].z;
-								W.x = position[x + 1][z].x - position[x][z].x;
-								W.y = position[x + 1][z].y - position[x][z].y;
-								W.z = position[x + 1][z].z - position[x][z].z;
-							}
-							if (i == 1) {
-								V.x = position[x + 1][z + 1].x - position[x][z].x;
-								V.y = position[x + 1][z + 1].y - position[x][z].y;
-								V.z = position[x + 1][z + 1].z - position[x][z].z;
-								W.x = position[x][z + 1].x - position[x][z].x;
-								W.y = position[x][z + 1].y - position[x][z].y;
-								W.z = position[x][z + 1].z - position[x][z].z;
-							}
-							f_normals[i][x][z].x = (V.y*W.z) - (V.z*W.y);
-							f_normals[i][x][z].y = (V.z*W.x) - (V.x*W.z);
-							f_normals[i][x][z].z = (V.x*W.y) - (V.y*W.x);
-							f_normals[i][x][z] = normalize(f_normals[i][x][z]);
-							if (chunkData.posSquare.z >= 0.0) {
-								if (f_normals[i][x][z].z < 0.0) {
-									f_normals[i][x][z].x *= -1;
-									f_normals[i][x][z].y *= -1;
-									f_normals[i][x][z].z *= -1;
-								}
-							}
-							else if (chunkData.posSquare.z < 0.0) {
-								if (f_normals[i][x][z].z > 0.0) {
-									f_normals[i][x][z].x *= -1;
-									f_normals[i][x][z].y *= -1;
-									f_normals[i][x][z].z *= -1;
-								}
-							}
-						}
-					}
-				}
-				//*
-				for (int z = 0; z < chunkLength + 1; z++) {
-					for (int x = 0; x < chunkLength + 1; x++) {
-						if (x != 0 && z != 0 && x != chunkLength && z != chunkLength) {
-							normals[x][z].x = ((f_normals[0][x - 1][z - 1].x + f_normals[1][x - 1][z - 1].x) / 2 + f_normals[0][x - 1][z].x + (f_normals[0][x][z].x + f_normals[1][x][z].x) / 2 + f_normals[1][x][z - 1].x) / 4;
-							normals[x][z].y = ((f_normals[0][x - 1][z - 1].y + f_normals[1][x - 1][z - 1].y) / 2 + f_normals[0][x - 1][z].y + (f_normals[0][x][z].y + f_normals[1][x][z].y) / 2 + f_normals[1][x][z - 1].y) / 4;
-							normals[x][z].z = ((f_normals[0][x - 1][z - 1].z + f_normals[1][x - 1][z - 1].z) / 2 + f_normals[0][x - 1][z].z + (f_normals[0][x][z].z + f_normals[1][x][z].z) / 2 + f_normals[1][x][z - 1].z) / 4;
-							normals[x][z] = normalize(normals[x][z]);
-						}
-						else if (x == chunkLength) {////////////CHANGE//////////////
-							normals[x][z].x = f_normals[0][x - 1][z].x + f_normals[1][x - 1][z].x;
-							normals[x][z].y = f_normals[0][x - 1][z].y + f_normals[1][x - 1][z].y;
-							normals[x][z].z = f_normals[0][x - 1][z].z + f_normals[1][x - 1][z].z;
-							normals[x][z] = normalize(normals[x][z]);
-						}
-						else if (z == chunkLength) {
-							normals[x][z].x = f_normals[0][x][z - 1].x + f_normals[1][x][z - 1].x;
-							normals[x][z].y = f_normals[0][x][z - 1].y + f_normals[1][x][z - 1].y;
-							normals[x][z].z = f_normals[0][x][z - 1].z + f_normals[1][x][z - 1].z;
-							normals[x][z] = normalize(normals[x][z]);
-						}
-						else {////////////CHANGE//////////////
-							normals[x][z].x = f_normals[0][x][z].x + f_normals[1][x][z].x;
-							normals[x][z].y = f_normals[0][x][z].y + f_normals[1][x][z].y;
-							normals[x][z].z = f_normals[0][x][z].z + f_normals[1][x][z].z;
-							normals[x][z] = normalize(normals[x][z]);
-						}
-						verticesFinal[z * (chunkLength + 1) + x].normal = XMFLOAT3(float(normals[x][z].x), float(normals[x][z].y), float(normals[x][z].z));
-					}
-				}
-
-				d3d11DevCon->Map(vertBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &updatedVertexBufferData);
-				memcpy(updatedVertexBufferData.pData, verticesFinal, sizeof(verticesFinal));
-				d3d11DevCon->Unmap(vertBuffer, 0);
-			}
-
-			void draw() {
-				//Set Vertex and Pixel Shaders
-				d3d11DevCon->VSSetShader(PLANET_VS, 0, 0);
-				d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
-
-				//Set the Input Layout
-				d3d11DevCon->IASetInputLayout(planetLayout);
-
-				UINT stride = sizeof(PlanetVertex);
-				UINT offset = 0;
-
-				d3d11DevCon->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-				d3d11DevCon->IASetVertexBuffers(0, 1, &vertBuffer, &stride, &offset);
-
-				//Set the WVP matrix and send it to the constant buffer in effect file
-				//WVP = groundWorld * camView * camProjection;
-				WVP = groundWorld * camView * planetCamProjection;
-				cbPerObj.WVP = XMMatrixTranspose(WVP);
-				cbPerObj.World = XMMatrixTranspose(groundWorld);
-				d3d11DevCon->UpdateSubresource(cbPerObjectBuffer, 0, NULL, &cbPerObj, 0, 0);
-				d3d11DevCon->VSSetConstantBuffers(0, 1, &cbPerObjectBuffer);
-				d3d11DevCon->PSSetShaderResources(0, 1, &texture[0]);
-				d3d11DevCon->PSSetShaderResources(1, 1, &texture[2]);
-				d3d11DevCon->PSSetShaderResources(2, 1, &texture[8]);
-				d3d11DevCon->PSSetSamplers(0, 1, &CubesTexSamplerState);
-
-				d3d11DevCon->RSSetState(RSCullNone);
-				//d3d11DevCon->RSSetState(Wireframe);
-				d3d11DevCon->DrawIndexed(chunkLength*chunkLength * 6, 0, 0);
-			}
-
-			void cleanUp() {
-				vertBuffer->Release();
-				indexBuffer->Release();
-			}
-		}sideChunks[2048];
-
 		void create(double squarePos_z) {
 			squarePosZ = squarePos_z;
 
 			for (int i = 0; i < 2048; i++) {
 				quadData[i].draw = false;
-				firstUpdate[i] = false;
+				quadData[i].terrainCalculated = false;
+				quadData[i].firstUpdate = false;
 			}
 			quadData[0].draw = true;
-			firstUpdate[0] = true;
+			quadData[0].firstUpdate = true;
 
-			quadData[0] = quad(double3(0.0, 0.0, squarePosZ), double3(0.0, 0.0, squarePosZ), maxLength);
+			quadData[0] = Quad(double3(0.0, 0.0, squarePosZ), double3(0.0, 0.0, squarePosZ), maxLength);
 			quadData[0].update();
 
-
 			for (int i = 0; i < 2048; i++)
-				sideChunks[i].create();
+				quadData[i].create('z');
 		}
 
 		void update(double3 camPos) {
@@ -1958,14 +1517,14 @@ class Planet {
 				if (quadData[i].draw == true) {
 					quadData[i].update();
 
-					if (firstUpdate[i] == true) {
-						sideChunks[i].firstCamPos = camPos;
-						sideChunks[i].updateChunkData(quadData[i]);
+					if (quadData[i].firstUpdate == true) {
+						quadData[i].firstCamPos = camPos;
+						quadData[i].updateChunkData('z');
 
-						firstUpdate[i] = false;
+						quadData[i].firstUpdate = false;
 					}
 
-					sideChunks[i].update(camPos);
+					quadData[i].transform(camPos);
 				}
 			}
 		}
@@ -1977,14 +1536,14 @@ class Planet {
 
 			for (int i = 0; i < 2048; i++) {
 				if (quadData[i].draw == true && quadData[i].distance < eyeRange) {
-					sideChunks[i].draw();
+					quadData[i].drawTerrain();
 				}
 			}
 		}
 
 		void cleanUp() {
 			for (int i = 0; i < 2048; i++)
-				sideChunks[i].cleanUp();
+				quadData[i].cleanUp();
 		}
 
 	}sideZ0, sideZ1;

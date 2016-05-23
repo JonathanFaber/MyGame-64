@@ -2,6 +2,7 @@
 #include "shaders.h"
 #include "camera.h"
 #include "planet.h"
+#include "grass.h"
 #include "sky.h"
 #include "timer.h"
 #include "sprites.h"
@@ -263,6 +264,7 @@ void CleanUp()
     
 	planet.cleanUp();
 	skybox.cleanUp();
+	grass.cleanUp();
 	//sprucetree.cleanUp();
 
 	FPS.cleanUp();
@@ -306,7 +308,7 @@ bool InitScene()
 	////////////////////////
 	planet.init();
 	//sprucetree.init(std::string("models/Pine_4m.obj"));
-
+	grass.create();
 
 
 	FPS.create();
@@ -525,7 +527,7 @@ void UpdateScene(double time)
 	fpsCounter++;
 
 	planet.update();
-	//updateGrass(camPos, timeElaps);
+	grass.update(camPos, timeElaps);
 	skybox.updateSphere();
 	//sprucetree.update();
 
@@ -610,7 +612,7 @@ void DrawScene()
 	d3d11DevCon->OMSetBlendState(Transparency, blendFactor, 0xffffffff);
 
 	// Transparent with depth
-	//drawGrass();
+	grass.draw();
 
 	d3d11DevCon->OMSetDepthStencilState(DSLessEqualNoDepth, 0);
 
