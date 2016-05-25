@@ -798,19 +798,21 @@ public:
 				if (planet.sideY1.quadData[i].length == minLength) {
 					for (int z = 0; z < chunkLength + 1; z++) {
 						for (int x = 0; x < chunkLength + 1; x++) {
-							double3 temp = planet.sideY1.quadData[i].position[x][z];
-							temp.x += planet.sideY1.quadData[i].firstCamPos.x - camPos.x;
-							temp.y += planet.sideY1.quadData[i].firstCamPos.y - camPos.y;
-							temp.z += planet.sideY1.quadData[i].firstCamPos.z - camPos.z;
+							if (planet.sideY1.quadData[i].verticesFinal[z * (chunkLength + 1) + x].landTypeHeight <= 0.5f) {
+								double3 temp = planet.sideY1.quadData[i].position[x][z];
+								temp.x += planet.sideY1.quadData[i].firstCamPos.x - camPos.x;
+								temp.y += planet.sideY1.quadData[i].firstCamPos.y - camPos.y;
+								temp.z += planet.sideY1.quadData[i].firstCamPos.z - camPos.z;
 
-							if (vLength(temp) < 50.0) {
-								grassPos[counter].instancePos = XMFLOAT2(float(temp.x), float(temp.z));
-								grassPos[counter].instanceHeights.x = float(temp.y);
-								grassPos[counter].instanceHeights.y = float(temp.y);
-								grassPos[counter].instanceHeights.z = float(temp.y);
-								grassPos[counter].instanceHeights.w = float(temp.y);
-								grassPos[counter].instanceRot = XMFLOAT3(cos(windDirection.x*windSpeed + 1.57f), positive(sin(windDirection.x*windSpeed + 1.57f)) * positive(sin(windDirection.y*windSpeed + 1.57f)) - 1.0f, cos(windDirection.y*windSpeed + 1.57f));
-								counter++;
+								if (vLength(temp) < 50.0) {
+									grassPos[counter].instancePos = XMFLOAT2(float(temp.x), float(temp.z));
+									grassPos[counter].instanceHeights.x = float(temp.y);
+									grassPos[counter].instanceHeights.y = float(temp.y);
+									grassPos[counter].instanceHeights.z = float(temp.y);
+									grassPos[counter].instanceHeights.w = float(temp.y);
+									grassPos[counter].instanceRot = XMFLOAT3(0.0f, 0.f, 0.0f);
+									counter++;
+								}
 							}
 						}
 					}

@@ -195,6 +195,13 @@ INSTANCE_VS_OUTPUT INSTANCE_VS(float4 inPos : POSITION, float2 inTexCoord : TEXC
 	*/
 	inPos.y += (instanceHeights.x + instanceHeights.y + instanceHeights.z + instanceHeights.w) / 4.0f;
 
+
+	float2 windDirection = float2(0.7071f, 0.7071f);
+	float windSpeed = 0.0f;
+	float windIntensity = 0.125f;
+
+	instanceRot = float3(cos(windDirection.x*windSpeed + 1.57f), abs(sin(windDirection.x*windSpeed + 1.57f)) * abs(sin(windDirection.y*windSpeed + 1.57f)) - 1.0f, cos(windDirection.y*windSpeed + 1.57f));
+
 	inPos.x += instanceRot.x*firstPosY;
 	inPos.y += instanceRot.y*firstPosY;
 	inPos.z += instanceRot.z*firstPosY;

@@ -418,7 +418,6 @@ public:
 		XMMATRIX groundWorld;
 
 		PlanetVertex verticesInitial[(chunkLength + 1)*(chunkLength + 1)];
-		PlanetVertex verticesFinal[(chunkLength + 1)*(chunkLength + 1)];
 		DWORD indices[chunkLength*chunkLength * 6];
 
 		D3D11_BUFFER_DESC indexBufferDesc;
@@ -428,6 +427,7 @@ public:
 		D3D11_MAPPED_SUBRESOURCE updatedVertexBufferData;
 
 	public:
+		PlanetVertex verticesFinal[(chunkLength + 1)*(chunkLength + 1)];
 		double3 firstCamPos;
 		double3 position[chunkLength + 1][chunkLength + 1];
 		bool terrainCalculated;
