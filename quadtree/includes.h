@@ -197,6 +197,7 @@ Light light;
 struct cbPerFrame
 {
 	Light  light;
+	float timeElaps;
 };
 
 cbPerFrame constbuffPerFrame;
