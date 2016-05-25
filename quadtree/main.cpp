@@ -588,6 +588,7 @@ void DrawScene()
 	d3d11DevCon->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0);
 
 	constbuffPerFrame.light = light;
+	constbuffPerFrame.timeElaps = timeElaps;
 	d3d11DevCon->UpdateSubresource( cbPerFrameBuffer, 0, NULL, &constbuffPerFrame, 0, 0 );
 	d3d11DevCon->PSSetConstantBuffers(0, 1, &cbPerFrameBuffer);	
 
