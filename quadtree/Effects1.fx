@@ -174,7 +174,7 @@ SPRITE_VS_OUTPUT SPRITE_VS(float4 inPos : POSITION, float2 inTexCoord : TEXCOORD
 	return output;
 }
 
-INSTANCE_VS_OUTPUT INSTANCE_VS(float4 inPos : POSITION, float2 inTexCoord : TEXCOORD, float3 normal : NORMAL, float2 instancePos : INSTANCEPOS, float4 instanceHeights : INSTANCEHEIGHTS, float3 instanceRot : INSTANCEROT, uint indexID : SV_VertexID)
+INSTANCE_VS_OUTPUT INSTANCE_VS(float4 inPos : POSITION, float2 inTexCoord : TEXCOORD, float3 normal : NORMAL, float2 instancePos : INSTANCEPOS, float4 instanceHeights : INSTANCEHEIGHTS, uint indexID : SV_VertexID)
 {
 	INSTANCE_VS_OUTPUT output;
 
@@ -207,7 +207,7 @@ INSTANCE_VS_OUTPUT INSTANCE_VS(float4 inPos : POSITION, float2 inTexCoord : TEXC
 	windDirection.y = sin(windIntensity*timeElaps);
 	//windDirection = normalize(windDirection);
 
-	instanceRot = float3(cos(windDirection.x*windSpeed + 1.57f), abs(sin(windDirection.x*windSpeed + 1.57f)) * abs(sin(windDirection.y*windSpeed + 1.57f)) - 1.0f, cos(windDirection.y*windSpeed + 1.57f));
+	float3 instanceRot = float3(cos(windDirection.x*windSpeed + 1.57f), abs(sin(windDirection.x*windSpeed + 1.57f)) * abs(sin(windDirection.y*windSpeed + 1.57f)) - 1.0f, cos(windDirection.y*windSpeed + 1.57f));
 	
 
 	inPos.x += instanceRot.x*firstPosY;
