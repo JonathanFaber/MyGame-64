@@ -429,7 +429,6 @@ public:
 	public:
 		PlanetVertex verticesFinal[(chunkLength + 1)*(chunkLength + 1)];
 		double3 firstCamPos;
-		double3 position[chunkLength + 1][chunkLength + 1];
 		bool terrainCalculated;
 		bool firstUpdate;
 
@@ -559,8 +558,6 @@ public:
 					temp.y = temp.y - firstCamPos.y;
 					temp.z = temp.z - firstCamPos.z;
 
-					position[x][z] = temp;
-
 					verticesFinal[z * (chunkLength + 1) + x].pos = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
 					if (side == 'y')
 						verticesFinal[z * (chunkLength + 1) + x].texCoord = XMFLOAT2(float(double(verticesInitial[z * (chunkLength + 1) + x].pos.x) * length), float(double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * length));
@@ -571,34 +568,33 @@ public:
 				}
 			}
 
-			double3 V;
-			double3 W;
-			double3 f_normals[2][chunkLength][chunkLength];
-			double3 normals[chunkLength + 1][chunkLength + 1];
+			XMFLOAT3 V;
+			XMFLOAT3 W;
+			XMFLOAT3 f_normals[2][chunkLength][chunkLength];
+			XMFLOAT3 normals[chunkLength + 1][chunkLength + 1];
 
 			counter = 0;
 			for (int z = 0; z < chunkLength; z++) {
 				for (int x = 0; x < chunkLength; x++) {
 					for (int i = 0; i < 2; i++) {
 						if (i == 0) {
-							V.x = position[x + 1][z + 1].x - position[x][z].x;
-							V.y = position[x + 1][z + 1].y - position[x][z].y;
-							V.z = position[x + 1][z + 1].z - position[x][z].z;
-							W.x = position[x + 1][z].x - position[x][z].x;
-							W.y = position[x + 1][z].y - position[x][z].y;
-							W.z = position[x + 1][z].z - position[x][z].z;
+							
+							V.x = verticesFinal[(z+1) * (chunkLength + 1) + x+1].pos.x - verticesFinal[(z) * (chunkLength + 1) + x].pos.x;
+							V.y = verticesFinal[(z+1) * (chunkLength + 1) + x+1].pos.y - verticesFinal[(z) * (chunkLength + 1) + x].pos.y;
+							V.z = verticesFinal[(z+1) * (chunkLength + 1) + x+1].pos.z - verticesFinal[(z) * (chunkLength + 1) + x].pos.z;
+							W.x = verticesFinal[(z) * (chunkLength + 1) + x+1].pos.x - verticesFinal[(z) * (chunkLength + 1) + x].pos.x;
+							W.y = verticesFinal[(z) * (chunkLength + 1) + x+1].pos.y - verticesFinal[(z) * (chunkLength + 1) + x].pos.y;
+							W.z = verticesFinal[(z) * (chunkLength + 1) + x+1].pos.z - verticesFinal[(z) * (chunkLength + 1) + x].pos.z;
 						}
 						if (i == 1) {
-							V.x = position[x + 1][z + 1].x - position[x][z].x;
-							V.y = position[x + 1][z + 1].y - position[x][z].y;
-							V.z = position[x + 1][z + 1].z - position[x][z].z;
-							W.x = position[x][z + 1].x - position[x][z].x;
-							W.y = position[x][z + 1].y - position[x][z].y;
-							W.z = position[x][z + 1].z - position[x][z].z;
+							V.x = verticesFinal[(z+1) * (chunkLength + 1) + x+1].pos.x - verticesFinal[(z) * (chunkLength + 1) + x].pos.x;
+							V.y = verticesFinal[(z+1) * (chunkLength + 1) + x+1].pos.y - verticesFinal[(z) * (chunkLength + 1) + x].pos.y;
+							V.z = verticesFinal[(z+1) * (chunkLength + 1) + x+1].pos.z - verticesFinal[(z) * (chunkLength + 1) + x].pos.z;
+							W.x = verticesFinal[(z+1) * (chunkLength + 1) + x].pos.x - verticesFinal[(z) * (chunkLength + 1) + x].pos.x;
+							W.y = verticesFinal[(z+1) * (chunkLength + 1) + x].pos.y - verticesFinal[(z) * (chunkLength + 1) + x].pos.y;
+							W.z = verticesFinal[(z+1) * (chunkLength + 1) + x].pos.z - verticesFinal[(z) * (chunkLength + 1) + x].pos.z;
 						}
-						f_normals[i][x][z].x = (V.y*W.z) - (V.z*W.y);
-						f_normals[i][x][z].y = (V.z*W.x) - (V.x*W.z);
-						f_normals[i][x][z].z = (V.x*W.y) - (V.y*W.x);
+						f_normals[i][x][z] = crossProduct(V, W);
 						f_normals[i][x][z] = normalize(f_normals[i][x][z]);
 
 						if (side == 'y') {
