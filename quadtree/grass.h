@@ -810,7 +810,7 @@ public:
 									grassPos[counter].instanceHeights.y = float(temp.y);
 									grassPos[counter].instanceHeights.z = float(temp.y);
 									grassPos[counter].instanceHeights.w = float(temp.y);
-									grassPos[counter].instanceRot = XMFLOAT3(0.0f, 0.f, 0.0f);
+									grassPos[counter].instanceRot = XMFLOAT3(0.0f, 0.0f, 0.0f);
 									counter++;
 								}
 							}

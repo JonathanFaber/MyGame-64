@@ -253,7 +253,8 @@ void CleanUp()
 
 	BackBuffer11->Release();
 
-	cbPerFrameBuffer->Release();
+	cbPerFrameBufferVS->Release();
+	cbPerFrameBufferPS->Release();
 	//cbPerPlanetBuffer->Release();
 
 	CubesTexSamplerState->Release();
@@ -361,12 +362,23 @@ bool InitScene()
 	ZeroMemory(&cbbd, sizeof(D3D11_BUFFER_DESC));
 
 	cbbd.Usage = D3D11_USAGE_DEFAULT;
-	cbbd.ByteWidth = sizeof(cbPerFrame);
+	cbbd.ByteWidth = sizeof(cbPerFrameVS);
 	cbbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
 	cbbd.CPUAccessFlags = 0;
 	cbbd.MiscFlags = 0;
 
-	hr = d3d11Device->CreateBuffer(&cbbd, NULL, &cbPerFrameBuffer);
+	hr = d3d11Device->CreateBuffer(&cbbd, NULL, &cbPerFrameBufferVS);
+
+	//Create the buffer to send to the cbuffer per frame in effect file
+	ZeroMemory(&cbbd, sizeof(D3D11_BUFFER_DESC));
+
+	cbbd.Usage = D3D11_USAGE_DEFAULT;
+	cbbd.ByteWidth = sizeof(cbPerFramePS);
+	cbbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	cbbd.CPUAccessFlags = 0;
+	cbbd.MiscFlags = 0;
+
+	hr = d3d11Device->CreateBuffer(&cbbd, NULL, &cbPerFrameBufferPS);
 
 	//Camera information
 	camPosition = XMVectorSet( 0.0f, 0.0f, 0.0f, 0.0f );
@@ -511,7 +523,6 @@ bool InitScene()
 	return true;
 }
 
-double timeElaps = 0.0;
 float timeSinceFpsCalc = 0.0f;
 int fpsCounter;
 //bool timePassed = true;
@@ -587,10 +598,14 @@ void DrawScene()
 	d3d11DevCon->ClearRenderTargetView(renderTargetView, bgColor);	
 	d3d11DevCon->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH|D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-	constbuffPerFrame.light = light;
-	constbuffPerFrame.timeElaps = timeElaps;
-	d3d11DevCon->UpdateSubresource( cbPerFrameBuffer, 0, NULL, &constbuffPerFrame, 0, 0 );
-	d3d11DevCon->PSSetConstantBuffers(0, 1, &cbPerFrameBuffer);	
+	constbuffPerFrameVS.timeElaps = float(timeElaps);
+	d3d11DevCon->UpdateSubresource(cbPerFrameBufferVS, 0, NULL, &constbuffPerFrameVS, 0, 0);
+	d3d11DevCon->VSSetConstantBuffers(1, 1, &cbPerFrameBufferVS);
+
+	constbuffPerFramePS.light = light;
+	//constbuffPerFrame.timeElaps = 1.0f;
+	d3d11DevCon->UpdateSubresource( cbPerFrameBufferPS, 0, NULL, &constbuffPerFramePS, 0, 0 );
+	d3d11DevCon->PSSetConstantBuffers(0, 1, &cbPerFrameBufferPS);	
 
 	//Set our Render Target
 	d3d11DevCon->OMSetRenderTargets( 1, &renderTargetView, depthStencilView );

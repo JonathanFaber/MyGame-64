@@ -50,22 +50,26 @@ double3 spherize_d(double3 pos1) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
+cbuffer cbPerFrameVS : register (b1)
+{
+	float timeElaps;
+	float3 pad1;
+};
 
 struct Light
 {
-	float3 dir;
 	float4 ambient;
 	float4 diffuse;
+	float3 dir;
 };
 
-cbuffer cbPerFrame
+cbuffer cbPerFramePS : register (b0)
 {
 	Light light;
-	float timeElaps;
+	float pad2;
 };
 
-cbuffer cbPerObject
+cbuffer cbPerObject : register (b0)
 {
 	float4x4 WVP;
 	float4x4 World;
@@ -196,21 +200,15 @@ INSTANCE_VS_OUTPUT INSTANCE_VS(float4 inPos : POSITION, float2 inTexCoord : TEXC
 	*/
 	inPos.y += (instanceHeights.x + instanceHeights.y + instanceHeights.z + instanceHeights.w) / 4.0f;
 	
-	
-	float2 windDirection = float2(cos(timeElaps*windIntensity), sin(timeElaps*windIntensity));
-	float windSpeed = 0.0f;
+	float windSpeed = 0.5f;
 	float windIntensity = 0.125f;
-	
-	windDirection = normalize(windDirection);
+	float2 windDirection;
+	windDirection.x = cos(windIntensity*timeElaps);
+	windDirection.y = sin(windIntensity*timeElaps);
+	//windDirection = normalize(windDirection);
 
 	instanceRot = float3(cos(windDirection.x*windSpeed + 1.57f), abs(sin(windDirection.x*windSpeed + 1.57f)) * abs(sin(windDirection.y*windSpeed + 1.57f)) - 1.0f, cos(windDirection.y*windSpeed + 1.57f));
-
-
-	float2 windDirection = float2(0.7071f, 0.7071f);
-	float windSpeed = 0.0f;
-	float windIntensity = 0.125f;
-
-	instanceRot = float3(cos(windDirection.x*windSpeed + 1.57f), abs(sin(windDirection.x*windSpeed + 1.57f)) * abs(sin(windDirection.y*windSpeed + 1.57f)) - 1.0f, cos(windDirection.y*windSpeed + 1.57f));
+	
 
 	inPos.x += instanceRot.x*firstPosY;
 	inPos.y += instanceRot.y*firstPosY;

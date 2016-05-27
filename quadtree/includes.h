@@ -42,7 +42,8 @@ ID3D11ShaderResourceView* texture[16];
 ID3D11SamplerState* CubesTexSamplerState;
 
 ID3D11Buffer* cbPerObjectBuffer;
-ID3D11Buffer* cbPerFrameBuffer;
+ID3D11Buffer* cbPerFrameBufferVS;
+ID3D11Buffer* cbPerFrameBufferPS;
 ID3D11Buffer* cbInstancePosBuffer;
 
 ID3D11Texture2D *BackBuffer11;
@@ -180,27 +181,36 @@ struct cbPerPlanet
 cbPerPlanet cbPer_Planet;
 */
 
+struct cbPerFrameVS
+{
+	float timeElaps;
+	XMFLOAT3 pad1;
+};
+
+double timeElaps = 0.0;
+
+cbPerFrameVS constbuffPerFrameVS;
+
 struct Light
 {
 	Light()
 	{
 		ZeroMemory(this, sizeof(Light));
 	}
-	XMFLOAT3 dir;
-	float pad;
 	XMFLOAT4 ambient;
 	XMFLOAT4 diffuse;
+	XMFLOAT3 dir;
 };
 
 Light light;
 
-struct cbPerFrame
+struct cbPerFramePS
 {
 	Light  light;
-	float timeElaps;
+	float pad2;
 };
 
-cbPerFrame constbuffPerFrame;
+cbPerFramePS constbuffPerFramePS;
 
 struct InstanceData
 {
