@@ -780,27 +780,20 @@ public:
 		hr = d3d11Device->CreateBuffer(&instancebd, &InitialInstanceData, &cbInstancePosBuffer);
 	}
 
-	XMFLOAT2 windDirection = XMFLOAT2(1.0f, 1.0f);
-	float windSpeed = 0.0f;
-	float windIntensity = 0.125f;
-
-	void update(double3 camPos, double timeElaps) {
-		windDirection.x = cos(timeElaps*windIntensity);
-		windDirection.y = sin(timeElaps*windIntensity);
-		windDirection = normalize(windDirection);
-
+	void update(double3 camPos) {
 		counter = 0;
 
 		for (int i = 0; i < 2048; i++) {
 			if (planet.sideY1.quadData[i].draw == true && planet.sideY1.quadData[i].firstUpdate == false) {
 				if (planet.sideY1.quadData[i].length == minLength) {
+					XMFLOAT3 posToCam = XMFLOAT3(planet.sideY1.quadData[i].firstCamPos.x - camPos.x, planet.sideY1.quadData[i].firstCamPos.y - camPos.y, planet.sideY1.quadData[i].firstCamPos.z - camPos.z);
 					for (int z = 0; z < chunkLength + 1; z++) {
 						for (int x = 0; x < chunkLength + 1; x++) {
 							if (planet.sideY1.quadData[i].verticesFinal[z * (chunkLength + 1) + x].landTypeHeight <= 0.5f) {
-								double3 temp = planet.sideY1.quadData[i].position[x][z];
-								temp.x += planet.sideY1.quadData[i].firstCamPos.x - camPos.x;
-								temp.y += planet.sideY1.quadData[i].firstCamPos.y - camPos.y;
-								temp.z += planet.sideY1.quadData[i].firstCamPos.z - camPos.z;
+								XMFLOAT3 temp = planet.sideY1.quadData[i].verticesFinal[(z) * (chunkLength + 1) + x].pos;
+								temp.x += posToCam.x;
+								temp.y += posToCam.y;
+								temp.z += posToCam.z;
 
 								if (vLength(temp) < 50.0) {
 									grassPos[counter].instancePos = XMFLOAT2(float(temp.x), float(temp.z));
