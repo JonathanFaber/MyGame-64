@@ -217,7 +217,6 @@ struct InstanceData
 	InstanceData() {}
 	XMFLOAT2 instancePos;
 	XMFLOAT4 instanceHeights;
-	XMFLOAT3 instanceRot;
 };
 
 
@@ -290,7 +289,6 @@ D3D11_INPUT_ELEMENT_DESC instance_layout[] =
 	// Data from the instance buffer
 	{ "INSTANCEPOS", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 	{ "INSTANCEHEIGHTS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 8, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
-	{ "INSTANCEROT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 1,	24, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 };
 
 UINT numElements = ARRAYSIZE(layout);
