@@ -413,6 +413,10 @@ float dotProduct(XMFLOAT3 a1, XMFLOAT3 b1){
 	return a1.x*b1.x + a1.y*b1.y + a1.z*b1.z;
 }
 
+XMFLOAT3 crossProduct(XMFLOAT3 a, XMFLOAT3 b){
+	return XMFLOAT3(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.y*b.z - a.z*b.y);
+}
+
 inline bool exists(const std::string& name) {
 	struct stat buffer;
 	return (stat(name.c_str(), &buffer) == 0);
