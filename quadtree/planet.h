@@ -22,7 +22,7 @@ public:
 		Quad(double3 pos1, double3 posSquare1, double length1) : pos(pos1), posSquare(posSquare1), length(length1) {}
 
 		void update() {
-			posAway = double3(pos.x - camPos.x, pos.y - camPos.y, pos.z - camPos.z);
+			posAway = pos - camPos;
 			distance = vLength(posAway);
 
 			if (distance < length*4.0 && length > minLength) {
@@ -151,9 +151,7 @@ public:
 					temp.y = double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * length;
 					temp.z = double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * length;
 
-					temp.x += posSquare.x;
-					temp.y += posSquare.y;
-					temp.z += posSquare.z;
+					temp = temp + posSquare;
 
 
 
@@ -166,18 +164,14 @@ public:
 
 					double3 tempNormal = temp;
 
-					temp.x *= maxLength;
-					temp.y *= maxLength;
-					temp.z *= maxLength;
+					temp = temp * maxLength;
 
 					terrainPoint.generateTerrainPoint(tempNormal);
 
 					verticesFinal[z * (chunkLength + 1) + x].height = terrainPoint.height_f;
 					verticesFinal[z * (chunkLength + 1) + x].landTypeHeight = terrainPoint.landTypeHeight_f;
 
-					temp.x += terrainPoint.terrain.x;
-					temp.y += terrainPoint.terrain.y;
-					temp.z += terrainPoint.terrain.z;
+					temp = temp + terrainPoint.terrain;
 
 
 
@@ -384,21 +378,17 @@ public:
 		virtual void makeParent(Quad *parent) = 0;
 
 		static void setChildData(Quad *child, Quad parent) {
-			child->pos = spherize(double3(child->posSquare.x / maxLength, child->posSquare.y / maxLength, child->posSquare.z / maxLength));
+			child->pos = spherize(child->posSquare / maxLength);
 
 			// Next apply height
 			double3 tempNormal = child->pos;
 
-			child->pos.x *= maxLength;
-			child->pos.y *= maxLength;
-			child->pos.z *= maxLength;
+			child->pos = child->pos * maxLength;
 			child->length = parent.length / 2.0;
 
 			terrainPoint.generateTerrainPoint(tempNormal);
 
-			child->pos.x += terrainPoint.terrain.x;
-			child->pos.y += terrainPoint.terrain.y;
-			child->pos.z += terrainPoint.terrain.z;
+			child->pos = child->pos + terrainPoint.terrain;
 
 			child->subdivide = false;
 			child->combine = false;
@@ -407,20 +397,16 @@ public:
 		}
 
 		static void setParent(Quad *parent) {
-			parent->pos = spherize(double3(parent->posSquare.x / maxLength, parent->posSquare.y / maxLength, parent->posSquare.z / maxLength));
+			parent->pos = spherize(parent->posSquare / maxLength);
 
 			// Next apply height
 			double3 tempNormal = parent->pos;
 
-			parent->pos.x *= maxLength;
-			parent->pos.y *= maxLength;
-			parent->pos.z *= maxLength;
+			parent->pos = parent->pos * maxLength;
 
 			terrainPoint.generateTerrainPoint(tempNormal);
 
-			parent->pos.x += terrainPoint.terrain.x;
-			parent->pos.y += terrainPoint.terrain.y;
-			parent->pos.z += terrainPoint.terrain.z;
+			parent->pos = parent->pos + terrainPoint.terrain;
 
 			parent->length *= 2.0;
 
@@ -512,11 +498,10 @@ public:
 			if (eyeRange < 8000.0)
 				eyeRange = 8000.0;
 
-			eyeRange = 5000000000.0;
-
 			for (int i = 0; i < 2048; i++) {
 				if (quadData[i].draw == true && quadData[i].distance < eyeRange) {
-					quadData[i].drawTerrain();
+					if (dotProduct(quadData[i].posAway, camDir) > 0.5 || quadData[i].distance < 40.0 || speed > 100.0)
+						quadData[i].drawTerrain();
 				}
 			}
 		}
@@ -530,7 +515,7 @@ public:
 	};
 
 	class SideY : public Side {
-		void makeChild(Quad *child, Quad parent) override {
+		void makeChild(Quad *child, Quad parent) {
 			if (counter == 0) {
 				child->posSquare = double3(parent.posSquare.x - 0.5*parent.length, squarePosSide, parent.posSquare.z - 0.5*parent.length);
 				setChildData(child, parent);
@@ -554,7 +539,7 @@ public:
 			}
 		}
 
-		void makeParent(Quad *parent) override {
+		void makeParent(Quad *parent) {
 			if (((parent->posSquare.x - parent->length + maxLength) / (parent->length * 2.0)) / 2.0 == floor(((parent->posSquare.x - parent->length + maxLength) / (parent->length * 2.0)) / 2.0)
 				&& ((parent->posSquare.z - parent->length + maxLength) / (parent->length * 2.0)) / 2.0 == floor(((parent->posSquare.z - parent->length + maxLength) / (parent->length * 2.0)) / 2.0)) {
 
@@ -585,7 +570,7 @@ public:
 
 
 	class SideX : public Side {
-		void makeChild(Quad *child, Quad parent) override {
+		void makeChild(Quad *child, Quad parent) {
 			if (counter == 0) {
 				child->posSquare = double3(squarePosSide, parent.posSquare.y - 0.5*parent.length, parent.posSquare.z - 0.5*parent.length);
 				setChildData(child, parent);
@@ -609,7 +594,7 @@ public:
 			}
 		}
 
-		void makeParent(Quad *parent) override {
+		void makeParent(Quad *parent) {
 			if (((parent->posSquare.y - parent->length + maxLength) / (parent->length * 2.0)) / 2.0 == floor(((parent->posSquare.y - parent->length + maxLength) / (parent->length * 2.0)) / 2.0)
 				&& ((parent->posSquare.z - parent->length + maxLength) / (parent->length * 2.0)) / 2.0 == floor(((parent->posSquare.z - parent->length + maxLength) / (parent->length * 2.0)) / 2.0)) {
 
@@ -639,7 +624,7 @@ public:
 
 
 	class SideZ : public Side {
-		void makeChild(Quad *child, Quad parent) override {
+		void makeChild(Quad *child, Quad parent) {
 			if (counter == 0) {
 				child->posSquare = double3(parent.posSquare.x - 0.5*parent.length, parent.posSquare.y - 0.5*parent.length, squarePosSide);
 				setChildData(child, parent);
@@ -663,7 +648,7 @@ public:
 			}
 		}
 
-		void makeParent(Quad *parent) override {
+		void makeParent(Quad *parent) {
 			if (((parent->posSquare.x - parent->length + maxLength) / (parent->length * 2.0)) / 2.0 == floor(((parent->posSquare.x - parent->length + maxLength) / (parent->length * 2.0)) / 2.0)
 				&& ((parent->posSquare.y - parent->length + maxLength) / (parent->length * 2.0)) / 2.0 == floor(((parent->posSquare.y - parent->length + maxLength) / (parent->length * 2.0)) / 2.0)) {
 

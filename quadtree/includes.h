@@ -317,6 +317,22 @@ struct double3 {
 
 	double3() {}
 	double3(double x, double y, double z) : x(x), y(y), z(z) {}
+
+	double3 operator+(const double3 &v) {
+		return double3(this->x + v.x, this->y + v.y, this->z + v.z);
+	}
+
+	double3 operator-(const double3 &v) {
+		return double3(this->x - v.x, this->y - v.y, this->z - v.z);
+	}
+
+	double3 operator*(const double &v) {
+		return double3(this->x * v, this->y * v, this->z * v);
+	}
+
+	double3 operator/(const double &v) {
+		return double3(this->x / v, this->y / v, this->z / v);
+	}
 };
 
 struct int2 {
@@ -419,6 +435,10 @@ float dotProduct(XMFLOAT2 a, XMFLOAT2 b){
 
 float dotProduct(XMFLOAT3 a1, XMFLOAT3 b1){
 	return a1.x*b1.x + a1.y*b1.y + a1.z*b1.z;
+}
+
+double dotProduct(double3 a2, double3 b2) {
+	return a2.x*b2.x + a2.y*b2.y + a2.z*b2.z;
 }
 
 XMFLOAT3 crossProduct(XMFLOAT3 a, XMFLOAT3 b){
@@ -586,8 +606,48 @@ void spherizePoint(double3& position)
 
 struct osn_context *ctx;
 
-//
+// camera
+
 double3 camPos = double3(0.0, 5000000.0, 0.0);
-//
+
+double3 lastCamPos = camPos;
+double3 camOffset;
+double camOffsetLength;
+double3 camDir;
+double3 camDirRight;
+XMVECTOR camPosition = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
+XMVECTOR camTarget;
+XMVECTOR camUp;
+
+XMVECTOR DefaultForward = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
+XMVECTOR DefaultRight = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+//XMVECTOR camForward = XMVectorSet(0.0f,0.0f,1.0f, 0.0f);
+XMVECTOR camRight = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+
+XMMATRIX camRotationMatrix;
+
+double moveLeftRight = 0.0;
+double moveBackForward = 0.0;
+double2 moveNormalized;
+
+double camYaw = 0.0;
+double camPitch = 0.0;
+
+double grav = 9.81;
+double x_vel = 0.0;
+double y_vel = 0.0;
+double y_vel_old;
+double z_vel = 0.0;
+
+double playerVelocity;
+double speed = 1000000.0;
+double maxSpeed = 200.0;
+double speedTime;
+double maxspeedTime;
+bool onlyForward;
+bool running;
+bool crouching;
+double camHeight;
+
 
 #endif

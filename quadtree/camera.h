@@ -4,47 +4,6 @@
 #ifndef __CAMERA_H_INCLUDED__
 #define __CAMERA_H_INCLUDED__ 
 
-double3 lastCamPos = camPos;
-double3 camOffset;
-double camOffsetLength;
-double3 camDir;
-double3 camDirRight;
-XMVECTOR camPosition = XMVectorSet(0.0f, 0.0f, 0.0f, 0.0f);
-XMVECTOR camTarget;
-XMVECTOR camUp;
-
-XMVECTOR DefaultForward = XMVectorSet(0.0f,0.0f,1.0f, 0.0f);
-XMVECTOR DefaultRight = XMVectorSet(1.0f,0.0f,0.0f, 0.0f);
-XMVECTOR camForward = XMVectorSet(0.0f,0.0f,1.0f, 0.0f);
-XMVECTOR camRight = XMVectorSet(1.0f,0.0f,0.0f, 0.0f);
-
-XMMATRIX camRotationMatrix;
-
-double moveLeftRight = 0.0;
-double moveBackForward = 0.0;
-double2 moveNormalized;
-
-double camYaw = 0.0;
-double camPitch = 0.0;
-
-double grav = 9.81;
-double x_vel = 0.0;
-double y_vel = 0.0;
-double y_vel_old;
-double z_vel = 0.0;
-
-double playerVelocity;
-double speed = 1000000.0;
-double maxSpeed = 200.0;
-double speedTime;
-double maxspeedTime;
-bool onlyForward;
-bool running;
-bool crouching;
-double camHeight;
-float terrainY0, terrainY1;
-XMFLOAT3 faceNormal[2];
-
 void UpdateCameraDirection()
 {
 	camRotationMatrix = XMMatrixRotationRollPitchYaw(camPitch, camYaw, 0);
@@ -56,7 +15,7 @@ void UpdateCameraDirection()
 
 	camRight = XMVector3TransformCoord(DefaultRight, RotateYTempMatrix);
 	camUp = XMVector3TransformCoord(camUp, RotateYTempMatrix);
-	camForward = XMVector3TransformCoord(DefaultForward, RotateYTempMatrix);
+	//camForward = XMVector3TransformCoord(DefaultForward, RotateYTempMatrix);
 
 	camDir.x = XMVectorGetX(camTarget);
 	camDir.y = XMVectorGetY(camTarget);
