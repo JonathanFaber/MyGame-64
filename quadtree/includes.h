@@ -135,6 +135,10 @@ int permutation[256];
 
 int counter = 0;
 
+const int chunkLength = 32;
+const double maxLength = 4194304.0;
+const double minLength = 16.0;
+
 //Function Prototypes//
 bool InitializeDirect3d11App(HINSTANCE hInstance);
 void CleanUp();
@@ -403,6 +407,10 @@ XMFLOAT2 normalize(XMFLOAT2 vector1){
 
 double vLength(double3 v) {
 	return sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+}
+
+double vLength(XMFLOAT3 v1) {
+	return sqrt(v1.x*v1.x + v1.y*v1.y + v1.z*v1.z);
 }
 
 float dotProduct(XMFLOAT2 a, XMFLOAT2 b){

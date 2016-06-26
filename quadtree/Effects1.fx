@@ -201,7 +201,7 @@ INSTANCE_VS_OUTPUT INSTANCE_VS(float4 inPos : POSITION, float2 inTexCoord : TEXC
 	inPos.y += (instanceHeights.x + instanceHeights.y + instanceHeights.z + instanceHeights.w) / 4.0f;
 	
 	float windSpeed = 0.5f;
-	float windIntensity = 0.125f;
+	float windIntensity = 0.5f;
 	float2 windDirection;
 	windDirection.x = cos(windIntensity*timeElaps);
 	windDirection.y = sin(windIntensity*timeElaps);

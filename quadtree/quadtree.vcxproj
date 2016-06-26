@@ -165,6 +165,7 @@
     <ClInclude Include="simplexnoise.h" />
     <ClInclude Include="sky.h" />
     <ClInclude Include="sprites.h" />
+    <ClInclude Include="terrain.h" />
     <ClInclude Include="timer.h" />
   </ItemGroup>
   <ItemGroup>

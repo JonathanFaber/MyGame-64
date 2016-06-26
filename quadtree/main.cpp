@@ -538,7 +538,7 @@ void UpdateScene(double time)
 	fpsCounter++;
 
 	planet.update();
-	grass.update(camPos, timeElaps);
+	grass.update(camPos);
 	skybox.updateSphere();
 	//sprucetree.update();
 

@@ -210,8 +210,8 @@ public:
 		counter++;
 		}
 		}
-		*/
-
+		//*/
+		/*
 		Vertex grassVertices[16];
 
 		counter = 0;
@@ -347,19 +347,21 @@ public:
 			11, 0, 12,
 			11, 12, 15,
 			*/
-		};
+			/*
+					};
 
-		//Positions per instance
-		counter = 0;
-		for (int x = 0; x < 100; x++) {
-			for (int z = 0; z < 100; z++) {
-				grassPos[counter].instancePos = XMFLOAT2(float(-x), float(-z));
-				grassPos[counter].instanceHeights = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
-				counter++;
-			}
-		}
+					//Positions per instance
+					counter = 0;
+					for (int x = 0; x < 100; x++) {
+						for (int z = 0; z < 100; z++) {
+							grassPos[counter].instancePos = XMFLOAT2(float(-x), float(-z));
+							grassPos[counter].instanceHeights = XMFLOAT4(0.0f, 0.0f, 0.0f, 0.0f);
+							counter++;
+						}
+					}
+					//*/
 
-		/*
+					//*
 		Vertex grassVertices[32];
 
 		counter = 0;
@@ -586,33 +588,32 @@ public:
 		grassVertices[counter].texCoord.x = 1.0f;
 		grassVertices[counter].texCoord.y = 1.0f;
 
-		for (int i = 0; i < 32; i++){
-		grassVertices[i].normal.x = 0.0f;
-		grassVertices[i].normal.y = 1.0f;
-		grassVertices[i].normal.z = 0.0f;
-		grassVertices[i].texID = 4;
+		for (int i = 0; i < 32; i++) {
+			grassVertices[i].normal.x = 0.0f;
+			grassVertices[i].normal.y = 1.0f;
+			grassVertices[i].normal.z = 0.0f;
 		}
 
 		DWORD grassIndices[72];
 
 		counter = 0;
-		for (int j = 0; j < 4; j++){
-		for (int i = 0; i < 3; i++){
-		grassIndices[counter] = 0+i*2+j*8;
-		counter++;
-		grassIndices[counter] = 1+i*2+j*8;
-		counter++;
-		grassIndices[counter] = 3+i*2+j*8;
-		counter++;
-		grassIndices[counter] = 0+i*2+j*8;
-		counter++;
-		grassIndices[counter] = 3+i*2+j*8;
-		counter++;
-		grassIndices[counter] = 2+i*2+j*8;
-		counter++;
+		for (int j = 0; j < 4; j++) {
+			for (int i = 0; i < 3; i++) {
+				grassIndices[counter] = 0 + i * 2 + j * 8;
+				counter++;
+				grassIndices[counter] = 1 + i * 2 + j * 8;
+				counter++;
+				grassIndices[counter] = 3 + i * 2 + j * 8;
+				counter++;
+				grassIndices[counter] = 0 + i * 2 + j * 8;
+				counter++;
+				grassIndices[counter] = 3 + i * 2 + j * 8;
+				counter++;
+				grassIndices[counter] = 2 + i * 2 + j * 8;
+				counter++;
+			}
 		}
-		}
-		*/
+		//*/
 
 		/*
 		Vertex grassVertices[14];
@@ -795,7 +796,8 @@ public:
 								temp.y += posToCam.y;
 								temp.z += posToCam.z;
 
-								if (vLength(temp) < 50.0) {
+								float tempLength = vLength(temp);
+								if (tempLength < 10.0) {
 									grassPos[counter].instancePos = XMFLOAT2(float(temp.x), float(temp.z));
 									grassPos[counter].instanceHeights.x = float(temp.y);
 									grassPos[counter].instanceHeights.y = float(temp.y);
@@ -803,13 +805,23 @@ public:
 									grassPos[counter].instanceHeights.w = float(temp.y);
 									counter++;
 								}
+								else if (tempLength < 50.0) {
+									if (dotProduct(XMFLOAT3(temp.x / tempLength, temp.y / tempLength, temp.z / tempLength), XMFLOAT3(camDir.x, camDir.y, camDir.z)) > 0.5f) {
+										grassPos[counter].instancePos = XMFLOAT2(float(temp.x), float(temp.z));
+										grassPos[counter].instanceHeights.x = float(temp.y);
+										grassPos[counter].instanceHeights.y = float(temp.y);
+										grassPos[counter].instanceHeights.z = float(temp.y);
+										grassPos[counter].instanceHeights.w = float(temp.y);
+										counter++;
+									}
+								}
 							}
 						}
 					}
 				}
 			}
 		}
-		
+
 		numGrassPatches = counter;
 
 		d3d11DevCon->Map(cbInstancePosBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &InitInstanceData);
@@ -856,7 +868,7 @@ public:
 		d3d11DevCon->PSSetSamplers(0, 1, &CubesTexSamplerState);
 
 		d3d11DevCon->RSSetState(RSCullNone);
-		d3d11DevCon->DrawIndexedInstanced(12, numGrassPatches, 0, 0, 0);
+		d3d11DevCon->DrawIndexedInstanced(72, numGrassPatches, 0, 0, 0);
 	}
 
 	void cleanUp() {

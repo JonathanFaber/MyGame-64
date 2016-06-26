@@ -1,383 +1,10 @@
 #include "includes.h"
 #include "shaders.h"
-#include "simplexnoise.h"
-#include "noiseFunctions.h"
+#include "terrain.h"
 
 
 #ifndef __PLANET_H_INCLUDED__
 #define __PLANET_H_INCLUDED__ 
-
-const int chunkLength = 32;
-const double maxLength = 4194304.0;
-const double minLength = 16.0;
-
-//
-class TerrainPoint {
-public:
-	double3 tempNormal;
-	double height;
-	float height_f;
-	double landHeight;
-	double temperatureHeight;
-	double moistureHeight;
-	double height1;
-	double landTypeHeight;
-	float landTypeHeight_f;
-	double amplitude;
-	double maxAmplitude;
-	double maxAmplitude1;
-	double noiseInput[3];
-	double freq;
-	double lacunarity;
-	double persistence;
-	double3 terrain;
-	double noise[28];
-
-	// change because it sucks
-	void generateTerrainPoint(double3 pos) {
-		tempNormal = pos;
-
-		pos.x *= maxLength;
-		pos.y *= maxLength;
-		pos.z *= maxLength;
-
-		height = 0.0;
-		height_f = 0.0f;
-		landHeight = 0.0;
-		height1 = 0.0;
-		landTypeHeight = 0.0;
-		landTypeHeight_f = 0.0f;
-		amplitude;
-		maxAmplitude = 0.0;
-		maxAmplitude1 = 0.0;
-		freq;
-		lacunarity = 2.0;
-		persistence = 0.5;
-
-		amplitude = 5000.0;
-		freq = 1.0;
-		for (int k = 0; k < 28; k++) {
-			noiseInput[0] = pos.x / maxLength * freq;
-			noiseInput[1] = pos.y / maxLength * freq;
-			noiseInput[2] = pos.z / maxLength * freq;
-
-			noise[k] = ((raw_noise_3d(noiseInput[0], noiseInput[1], noiseInput[2])));
-
-			freq *= lacunarity;
-		}
-
-		maxAmplitude = 0.0;
-		amplitude = 5000.0;
-		persistence = 0.5;
-		for (int k = 6; k < 28; k++) {
-			landTypeHeight += ((noise[k])) * amplitude;
-			maxAmplitude += amplitude;
-			amplitude *= persistence;
-		}
-
-		landTypeHeight /= maxAmplitude;
-		landTypeHeight_f = float(landTypeHeight);
-
-
-		double landMaxAmplitude = 0.0;
-		amplitude = 5000.0;
-		persistence = 0.5;
-		for (int k = 0; k < 22; k++) {
-			landHeight += ((noise[k])) * amplitude;
-			landMaxAmplitude += amplitude;
-			amplitude *= persistence;
-		}
-
-		landHeight /= landMaxAmplitude;
-
-		landHeight -= 0.15; // because planet is closer to 75 % water
-
-		height_f = float(landHeight);
-
-		if (landHeight > 0.0001) {
-			if (landTypeHeight > 0.54) {
-				height = RidgedMultifractal(double3(pos.x / maxLength * 512, pos.y / maxLength * 512, pos.z / maxLength * 512), 1.0, 2.0, 22.0, 1.0, 2.0) * 1000.0;
-
-				maxAmplitude = 0.0;
-				amplitude = 5000.0;
-				persistence = 0.5;
-				for (int k = 0; k < 11; k++) {
-					height1 += (noise[k]) * amplitude;
-					maxAmplitude += amplitude;
-					amplitude *= persistence;
-				}
-
-				height1 /= maxAmplitude;
-				height1 -= 0.15;
-				height1 *= maxAmplitude;
-
-				height += height1;
-			}
-			else if (landTypeHeight >= 0.5 && landTypeHeight <= 0.54) {
-				height = RidgedMultifractal(double3(pos.x / maxLength * 512, pos.y / maxLength * 512, pos.z / maxLength * 512), 1.0, 2.0, 22.0, 1.0, 2.0) * 1000.0;
-
-				maxAmplitude = 0.0;
-				amplitude = 5000.0;
-				persistence = 0.5;
-				for (int k = 0; k < 11; k++) {
-					height1 += (noise[k]) * amplitude;
-					maxAmplitude += amplitude;
-					amplitude *= persistence;
-				}
-
-				height1 /= maxAmplitude;
-				height1 -= 0.15;
-				height1 *= maxAmplitude;
-
-				height += height1;
-
-				height1 = 0.0;
-				maxAmplitude1 = 0.0;
-				amplitude = 5000.0;
-				persistence = 0.5;
-				for (int k = 0; k < 22; k++) {
-					if (k == 11) {
-						amplitude *= 12.0;
-					}
-					height1 += ((noise[k])) * amplitude;
-					maxAmplitude1 += amplitude;
-					amplitude *= persistence;
-				}
-
-				height1 /= maxAmplitude1;
-				height1 -= 0.15;
-				height1 *= maxAmplitude1;
-
-				height = ((landTypeHeight - 0.5) * 25 * height) + (1.0 - ((landTypeHeight - 0.5) * 25)) * height1;
-			}
-			else if (landTypeHeight > 0.0) {
-				maxAmplitude1 = 0.0;
-				amplitude = 5000.0;
-				persistence = 0.5;
-				for (int k = 0; k < 22; k++) {
-					if (k == 11) {
-						amplitude *= 12.0;
-					}
-					height += ((noise[k])) * amplitude;
-					maxAmplitude1 += amplitude;
-					amplitude *= persistence;
-				}
-
-				height /= maxAmplitude1;
-				height -= 0.15;
-				height *= maxAmplitude1;
-			}
-			else if (landTypeHeight >= -0.01 && landTypeHeight <= 0.0) {
-				height = 0.0;
-				maxAmplitude = 0.0;
-				amplitude = 5000.0;
-				persistence = 0.5;
-				for (int k = 0; k < 22; k++) {
-					if (k == 11) {
-						amplitude *= 12.0;
-					}
-					height += ((noise[k])) * amplitude;
-					maxAmplitude += amplitude;
-					amplitude *= persistence;
-				}
-
-				height /= maxAmplitude;
-				height -= 0.15;
-
-				height1 = 0.0;
-				maxAmplitude1 = 0.0;
-				amplitude = 5000.0;
-				persistence = 0.5;
-				for (int k = 0; k < 22; k++) {
-					if (k == 10)
-						amplitude *= 50.0;
-					if (k == 15)
-						persistence = 0.25;
-
-					height1 += ((noise[k])) * amplitude;
-					maxAmplitude1 += amplitude;
-					amplitude *= persistence;
-				}
-
-				height1 /= maxAmplitude1;
-				height1 -= 0.15;
-
-				height = ((landTypeHeight + 0.01) * 100 * height * maxAmplitude) + (1.0 - ((landTypeHeight + 0.01) * 100)) * height1 * maxAmplitude1;
-				//height = 1000.0;
-			}
-			else if (landTypeHeight < -0.01) {
-				maxAmplitude1 = 0.0;
-				amplitude = 5000.0;
-				persistence = 0.5;
-				for (int k = 0; k < 22; k++) {
-					if (k == 10)
-						amplitude *= 50.0;
-					if (k == 15)
-						persistence = 0.25;
-
-					height += ((noise[k])) * amplitude;
-					maxAmplitude1 += amplitude;
-					amplitude *= persistence;
-				}
-
-				height /= maxAmplitude1;
-				height -= 0.15;
-				height *= maxAmplitude1;
-
-
-				//height = ((landHeight) * 10000 * height1 * maxAmplitude1) + (1.0 - ((landHeight) * 10000)) * landHeight * maxAmplitude;
-			}
-		}
-		else if (landHeight >= 0.0 && landHeight <= 0.0001) {
-			if (landTypeHeight > 0.51) {
-				maxAmplitude = 0.0;
-				amplitude = 5000.0;
-				persistence = 0.5;
-				for (int k = 0; k < 22; k++) {
-					if (k == 11) {
-						amplitude *= 128.0;
-					}
-					height += ((1.0 - abs(noise[k])) * amplitude);
-					maxAmplitude += amplitude;
-					amplitude *= persistence;
-				}
-
-				height /= maxAmplitude;
-				height -= 0.15;
-				height *= maxAmplitude;
-				height = ((landHeight) * 10000 * height) + (1.0 - ((landHeight) * 10000)) * landHeight * landMaxAmplitude;
-			}
-			else if (landTypeHeight >= 0.5 && landTypeHeight <= 0.51) {
-				maxAmplitude = 0.0;
-				amplitude = 5000.0;
-				persistence = 0.5;
-				for (int k = 0; k < 22; k++) {
-					if (k == 11) {
-						amplitude *= 256.0;
-					}
-					height += (noise[k]) * amplitude;
-					maxAmplitude += amplitude;
-					amplitude *= persistence;
-				}
-
-				height /= maxAmplitude;
-				height -= 0.15;
-				height *= maxAmplitude;
-
-				maxAmplitude1 = 0.0;
-				amplitude = 5000.0;
-				persistence = 0.5;
-				for (int k = 0; k < 22; k++) {
-					if (k == 11) {
-						amplitude *= 12.0;
-					}
-					height1 += ((noise[k])) * amplitude;
-					maxAmplitude1 += amplitude;
-					amplitude *= persistence;
-				}
-
-				height1 /= maxAmplitude1;
-				height1 -= 0.15;
-				height1 *= maxAmplitude1;
-
-				height = ((landTypeHeight - 0.5) * 100 * height) + (1.0 - ((landTypeHeight - 0.5) * 100)) * height1;
-				height = ((landHeight) * 10000 * height) + (1.0 - ((landHeight) * 10000)) * landHeight * landMaxAmplitude;
-			}
-			else if (landTypeHeight > 0.0) {
-				maxAmplitude1 = 0.0;
-				amplitude = 5000.0;
-				persistence = 0.5;
-				for (int k = 0; k < 22; k++) {
-					if (k == 11) {
-						amplitude *= 12.0;
-					}
-					height += ((noise[k])) * amplitude;
-					maxAmplitude1 += amplitude;
-					amplitude *= persistence;
-				}
-
-				height /= maxAmplitude1;
-				height -= 0.15;
-				height *= maxAmplitude1;
-
-				height = ((landHeight) * 10000 * height) + (1.0 - ((landHeight) * 10000)) * landHeight * landMaxAmplitude;
-			}
-			else if (landTypeHeight >= -0.01 && landTypeHeight <= 0.0) {
-				height = 0.0;
-				maxAmplitude = 0.0;
-				amplitude = 5000.0;
-				persistence = 0.5;
-				for (int k = 0; k < 22; k++) {
-					if (k == 11) {
-						amplitude *= 12.0;
-					}
-					height += ((noise[k])) * amplitude;
-					maxAmplitude += amplitude;
-					amplitude *= persistence;
-				}
-
-				height /= maxAmplitude;
-				height -= 0.15;
-
-				height1 = 0.0;
-				maxAmplitude1 = 0.0;
-				amplitude = 5000.0;
-				persistence = 0.5;
-				for (int k = 0; k < 22; k++) {
-					if (k == 10)
-						amplitude *= 50.0;
-					if (k == 15)
-						persistence = 0.25;
-
-					height1 += ((noise[k])) * amplitude;
-					maxAmplitude1 += amplitude;
-					amplitude *= persistence;
-				}
-
-				height1 /= maxAmplitude1;
-				height1 -= 0.15;
-
-				height = ((landTypeHeight + 0.01) * 100 * height * maxAmplitude) + (1.0 - ((landTypeHeight + 0.01) * 100)) * height1 * maxAmplitude1;
-				height = ((landHeight) * 10000 * height) + (1.0 - ((landHeight) * 10000)) * landHeight * landMaxAmplitude;
-			}
-			else if (landTypeHeight < -0.01) {
-				maxAmplitude1 = 0.0;
-				amplitude = 5000.0;
-				persistence = 0.5;
-				for (int k = 0; k < 22; k++) {
-					if (k == 10)
-						amplitude *= 50.0;
-					if (k == 15)
-						persistence = 0.25;
-
-					height += ((noise[k])) * amplitude;
-					maxAmplitude1 += amplitude;
-					amplitude *= persistence;
-				}
-
-				height /= maxAmplitude1;
-				height -= 0.15;
-				height *= maxAmplitude1;
-
-				height = ((landHeight) * 10000 * height) + (1.0 - ((landHeight) * 10000)) * landHeight * landMaxAmplitude;
-			}
-
-		}
-		else {
-			height = landHeight;
-			height *= maxAmplitude;
-		}
-
-
-		if (height <= 0.0)
-			height = 0.0;
-
-
-
-		terrain = double3(tempNormal.x * height, tempNormal.y * height, tempNormal.z * height);
-	}
-
-}terrainPoint;
 
 class Planet {
 public:
@@ -747,15 +374,65 @@ public:
 		}
 	};
 
-
-
-	class SideY {
+	class Side {
 	public:
-		Quad quadData[2048];
-		double squarePosY;
+		bool exitLoop;
+		Quad *quadData;
+		double squarePosSide;
+
+		virtual void makeChild(Quad *child, Quad parent) = 0;
+		virtual void makeParent(Quad *parent) = 0;
+
+		static void setChildData(Quad *child, Quad parent) {
+			child->pos = spherize(double3(child->posSquare.x / maxLength, child->posSquare.y / maxLength, child->posSquare.z / maxLength));
+
+			// Next apply height
+			double3 tempNormal = child->pos;
+
+			child->pos.x *= maxLength;
+			child->pos.y *= maxLength;
+			child->pos.z *= maxLength;
+			child->length = parent.length / 2.0;
+
+			terrainPoint.generateTerrainPoint(tempNormal);
+
+			child->pos.x += terrainPoint.terrain.x;
+			child->pos.y += terrainPoint.terrain.y;
+			child->pos.z += terrainPoint.terrain.z;
+
+			child->subdivide = false;
+			child->combine = false;
+			child->draw = true;
+			child->firstUpdate = true;
+		}
+
+		static void setParent(Quad *parent) {
+			parent->pos = spherize(double3(parent->posSquare.x / maxLength, parent->posSquare.y / maxLength, parent->posSquare.z / maxLength));
+
+			// Next apply height
+			double3 tempNormal = parent->pos;
+
+			parent->pos.x *= maxLength;
+			parent->pos.y *= maxLength;
+			parent->pos.z *= maxLength;
+
+			terrainPoint.generateTerrainPoint(tempNormal);
+
+			parent->pos.x += terrainPoint.terrain.x;
+			parent->pos.y += terrainPoint.terrain.y;
+			parent->pos.z += terrainPoint.terrain.z;
+
+			parent->length *= 2.0;
+
+			parent->subdivide = false;
+			parent->combine = false;
+			parent->draw = true;
+			parent->firstUpdate = true;
+			parent->update();
+		}
 
 		void subdivideQuad() {
-			bool exitLoop = false;
+			exitLoop = false;
 			for (int i = 0; i < 2048; i++) {
 				if (quadData[i].subdivide == true && exitLoop == false) {
 
@@ -763,115 +440,12 @@ public:
 					quadData[i].terrainCalculated = false;
 					quadData[i].subdivide = false;
 					quadData[i].combine = false;
-					Quad temp = quadData[i];
+					Quad parent = quadData[i];
 					counter = 0;
 
 					for (int j = 0; j < 2048; j++) {
 						if (quadData[j].draw == false) {
-							if (counter == 0) {
-								quadData[j].posSquare = double3(temp.posSquare.x - 0.5*temp.length, squarePosY, temp.posSquare.z - 0.5*temp.length);
-								quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
-
-								// Next apply height
-								double3 tempNormal = quadData[j].pos;
-
-								quadData[j].pos.x *= maxLength;
-								quadData[j].pos.y *= maxLength;
-								quadData[j].pos.z *= maxLength;
-								quadData[j].length = temp.length / 2.0;
-
-								terrainPoint.generateTerrainPoint(tempNormal);
-
-
-
-								quadData[j].pos.x += terrainPoint.terrain.x;
-								quadData[j].pos.y += terrainPoint.terrain.y;
-								quadData[j].pos.z += terrainPoint.terrain.z;
-
-								quadData[j].subdivide = false;
-								quadData[j].combine = false;
-								quadData[j].draw = true;
-								quadData[j].firstUpdate = true;
-								counter++;
-							}
-							else if (counter == 1) {
-								quadData[j].posSquare = double3(temp.posSquare.x + 0.5*temp.length, squarePosY, temp.posSquare.z - 0.5*temp.length);
-								quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
-
-								// Next apply height
-								double3 tempNormal = quadData[j].pos;
-
-								quadData[j].pos.x *= maxLength;
-								quadData[j].pos.y *= maxLength;
-								quadData[j].pos.z *= maxLength;
-								quadData[j].length = temp.length / 2.0;
-
-								terrainPoint.generateTerrainPoint(tempNormal);
-
-
-								quadData[j].pos.x += terrainPoint.terrain.x;
-								quadData[j].pos.y += terrainPoint.terrain.y;
-								quadData[j].pos.z += terrainPoint.terrain.z;
-
-								quadData[j].subdivide = false;
-								quadData[j].combine = false;
-								quadData[j].draw = true;
-								quadData[j].firstUpdate = true;
-								counter++;
-							}
-							else if (counter == 2) {
-								quadData[j].posSquare = double3(temp.posSquare.x + 0.5*temp.length, squarePosY, temp.posSquare.z + 0.5*temp.length);
-								quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
-
-								// Next apply height
-								double3 tempNormal = quadData[j].pos;
-
-								quadData[j].pos.x *= maxLength;
-								quadData[j].pos.y *= maxLength;
-								quadData[j].pos.z *= maxLength;
-								quadData[j].length = temp.length / 2.0;
-
-								terrainPoint.generateTerrainPoint(tempNormal);
-
-
-
-								quadData[j].pos.x += terrainPoint.terrain.x;
-								quadData[j].pos.y += terrainPoint.terrain.y;
-								quadData[j].pos.z += terrainPoint.terrain.z;
-
-								quadData[j].subdivide = false;
-								quadData[j].combine = false;
-								quadData[j].draw = true;
-								quadData[j].firstUpdate = true;
-								counter++;
-							}
-							else if (counter == 3) {
-								quadData[j].posSquare = double3(temp.posSquare.x - 0.5*temp.length, squarePosY, temp.posSquare.z + 0.5*temp.length);
-								quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
-
-								// Next apply height
-								double3 tempNormal = quadData[j].pos;
-
-								quadData[j].pos.x *= maxLength;
-								quadData[j].pos.y *= maxLength;
-								quadData[j].pos.z *= maxLength;
-								quadData[j].length = temp.length / 2.0;
-
-								terrainPoint.generateTerrainPoint(tempNormal);
-
-
-
-								quadData[j].pos.x += terrainPoint.terrain.x;
-								quadData[j].pos.y += terrainPoint.terrain.y;
-								quadData[j].pos.z += terrainPoint.terrain.z;
-
-								quadData[j].subdivide = false;
-								quadData[j].combine = false;
-								quadData[j].draw = true;
-								quadData[j].firstUpdate = true;
-								counter++;
-								exitLoop = true;
-							}
+							makeChild(&quadData[j], parent);
 						}
 					}
 				}
@@ -882,78 +456,15 @@ public:
 			for (double k = minLength; k < maxLength; k *= 2.0) {
 				for (int i = 0; i < 2048; i++) {
 					if (quadData[i].combine == true && quadData[i].length == k) { ///////////////////////// recombine in order from least length to greatest length, update the quadData member that was just changed
-
-						if (((quadData[i].posSquare.x - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0 == floor(((quadData[i].posSquare.x - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0)
-							&& ((quadData[i].posSquare.z - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0 == floor(((quadData[i].posSquare.z - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0)) {
-
-							quadData[i].draw = false;
-							quadData[i].terrainCalculated = false;
-
-							for (int j = 0; j < 2048; j++) {
-								if (quadData[j].draw == true && quadData[j].length == quadData[i].length) {
-
-									if (quadData[i].posSquare.x + quadData[i].length * 2.0 == quadData[j].posSquare.x && quadData[i].posSquare.z == quadData[j].posSquare.z) {
-										quadData[j].subdivide = false;
-										quadData[j].combine = false;
-										quadData[j].draw = false;
-										quadData[j].terrainCalculated = false;
-									}
-									else if (quadData[i].posSquare.x + quadData[i].length * 2.0 == quadData[j].posSquare.x && quadData[i].posSquare.z + quadData[i].length * 2.0 == quadData[j].posSquare.z) {
-										quadData[j].subdivide = false;
-										quadData[j].combine = false;
-										quadData[j].draw = false;
-										quadData[j].terrainCalculated = false;
-									}
-									else if (quadData[i].posSquare.x == quadData[j].posSquare.x && quadData[i].posSquare.z + quadData[i].length * 2.0 == quadData[j].posSquare.z) {
-										quadData[j].subdivide = false;
-										quadData[j].combine = false;
-										quadData[j].draw = false;
-										quadData[j].terrainCalculated = false;
-									}
-
-								}
-							}
-
-							quadData[i].posSquare.x += quadData[i].length;
-							quadData[i].posSquare.z += quadData[i].length;
-							quadData[i].pos = spherize(double3(quadData[i].posSquare.x / maxLength, quadData[i].posSquare.y / maxLength, quadData[i].posSquare.z / maxLength));
-
-							// Next apply height
-							// Next apply height
-							double3 tempNormal = quadData[i].pos;
-
-							quadData[i].pos.x *= maxLength;
-							quadData[i].pos.y *= maxLength;
-							quadData[i].pos.z *= maxLength;
-
-							terrainPoint.generateTerrainPoint(tempNormal);
-
-
-
-							quadData[i].pos.x += terrainPoint.terrain.x;
-							quadData[i].pos.y += terrainPoint.terrain.y;
-							quadData[i].pos.z += terrainPoint.terrain.z;
-
-							quadData[i].length *= 2.0;
-
-							quadData[i].subdivide = false;
-							quadData[i].combine = false;
-							quadData[i].draw = true;
-							quadData[i].firstUpdate = true;
-							quadData[i].update();
-						}
+						makeParent(&quadData[i]);
 					}
 				}
 			}
 		}
 
-		void updateQuad() {
-			subdivideQuad();
-			combineQuad();
-		}
-
-		void create(double squarePos_y) {
-			squarePosY = squarePos_y;
+		void create(double squarePos, char side) {
+			quadData = new Quad[2048];
+			squarePosSide = squarePos;
 
 			for (int i = 0; i < 2048; i++) {
 				quadData[i].draw = false;
@@ -963,22 +474,22 @@ public:
 			quadData[0].draw = true;
 			quadData[0].firstUpdate = true;
 
-			quadData[0] = Quad(double3(0.0, squarePosY, 0.0), double3(0.0, squarePosY, 0.0), maxLength);
+			if (side == 'y')
+				quadData[0] = Quad(double3(0.0, squarePosSide, 0.0), double3(0.0, squarePosSide, 0.0), maxLength);
+			else if (side == 'x')
+				quadData[0] = Quad(double3(squarePosSide, 0.0, 0.0), double3(squarePosSide, 0.0, 0.0), maxLength);
+			else
+				quadData[0] = Quad(double3(0.0, 0.0, squarePosSide), double3(0.0, 0.0, squarePosSide), maxLength);
+
 			quadData[0].update();
 
 			for (int i = 0; i < 2048; i++)
-				quadData[i].create('y');
+				quadData[i].create(side);
 		}
 
-		void update(double3 camPos) {
-			updateQuad();
-
-			double eyeRange = sqrt(positive(camPos.x*camPos.x + camPos.y*camPos.y + camPos.z*camPos.z - maxLength*maxLength))*1.05;
-			if (eyeRange < 8000.0)
-				eyeRange = 8000.0;
-
-
-
+		void update(double3 camPos, char side) {
+			subdivideQuad();
+			combineQuad();
 
 			for (int i = 0; i < 2048; i++) {
 				if (quadData[i].draw == true) {
@@ -986,7 +497,7 @@ public:
 
 					if (quadData[i].firstUpdate == true) {
 						quadData[i].firstCamPos = camPos;
-						quadData[i].updateChunkData('y');
+						quadData[i].updateChunkData(side);
 
 						quadData[i].firstUpdate = false;
 					}
@@ -1001,6 +512,8 @@ public:
 			if (eyeRange < 8000.0)
 				eyeRange = 8000.0;
 
+			eyeRange = 5000000000.0;
+
 			for (int i = 0; i < 2048; i++) {
 				if (quadData[i].draw == true && quadData[i].distance < eyeRange) {
 					quadData[i].drawTerrain();
@@ -1011,558 +524,192 @@ public:
 		void cleanUp() {
 			for (int i = 0; i < 2048; i++)
 				quadData[i].cleanUp();
+
+			delete[] quadData;
+		}
+	};
+
+	class SideY : public Side {
+		void makeChild(Quad *child, Quad parent) override {
+			if (counter == 0) {
+				child->posSquare = double3(parent.posSquare.x - 0.5*parent.length, squarePosSide, parent.posSquare.z - 0.5*parent.length);
+				setChildData(child, parent);
+				counter++;
+			}
+			else if (counter == 1) {
+				child->posSquare = double3(parent.posSquare.x + 0.5*parent.length, squarePosSide, parent.posSquare.z - 0.5*parent.length);
+				setChildData(child, parent);
+				counter++;
+			}
+			else if (counter == 2) {
+				child->posSquare = double3(parent.posSquare.x + 0.5*parent.length, squarePosSide, parent.posSquare.z + 0.5*parent.length);
+				setChildData(child, parent);
+				counter++;
+			}
+			else if (counter == 3) {
+				child->posSquare = double3(parent.posSquare.x - 0.5*parent.length, squarePosSide, parent.posSquare.z + 0.5*parent.length);
+				setChildData(child, parent);
+				counter++;
+				exitLoop = true;
+			}
 		}
 
+		void makeParent(Quad *parent) override {
+			if (((parent->posSquare.x - parent->length + maxLength) / (parent->length * 2.0)) / 2.0 == floor(((parent->posSquare.x - parent->length + maxLength) / (parent->length * 2.0)) / 2.0)
+				&& ((parent->posSquare.z - parent->length + maxLength) / (parent->length * 2.0)) / 2.0 == floor(((parent->posSquare.z - parent->length + maxLength) / (parent->length * 2.0)) / 2.0)) {
+
+				parent->draw = false;
+				parent->terrainCalculated = false;
+
+				for (int j = 0; j < 2048; j++) {
+					if (quadData[j].draw == true && quadData[j].length == parent->length) {
+
+						if (parent->posSquare.x + parent->length * 2.0 == quadData[j].posSquare.x && parent->posSquare.z == quadData[j].posSquare.z ||
+							parent->posSquare.x + parent->length * 2.0 == quadData[j].posSquare.x && parent->posSquare.z + parent->length * 2.0 == quadData[j].posSquare.z ||
+							parent->posSquare.x == quadData[j].posSquare.x && parent->posSquare.z + parent->length * 2.0 == quadData[j].posSquare.z) {
+
+							quadData[j].subdivide = false;
+							quadData[j].combine = false;
+							quadData[j].draw = false;
+							quadData[j].terrainCalculated = false;
+						}
+					}
+				}
+
+				parent->posSquare.x += parent->length;
+				parent->posSquare.z += parent->length;
+				setParent(parent);
+			}
+		}
 	}sideY0, sideY1;
 
 
-	class SideX {
-	public:
-		Quad quadData[2048];
-		double squarePosX;
+	class SideX : public Side {
+		void makeChild(Quad *child, Quad parent) override {
+			if (counter == 0) {
+				child->posSquare = double3(squarePosSide, parent.posSquare.y - 0.5*parent.length, parent.posSquare.z - 0.5*parent.length);
+				setChildData(child, parent);
+				counter++;
+			}
+			else if (counter == 1) {
+				child->posSquare = double3(squarePosSide, parent.posSquare.y + 0.5*parent.length, parent.posSquare.z - 0.5*parent.length);
+				setChildData(child, parent);
+				counter++;
+			}
+			else if (counter == 2) {
+				child->posSquare = double3(squarePosSide, parent.posSquare.y + 0.5*parent.length, parent.posSquare.z + 0.5*parent.length);
+				setChildData(child, parent);
+				counter++;
+			}
+			else if (counter == 3) {
+				child->posSquare = double3(squarePosSide, parent.posSquare.y - 0.5*parent.length, parent.posSquare.z + 0.5*parent.length);
+				setChildData(child, parent);
+				counter++;
+				exitLoop = true;
+			}
+		}
 
-		void subdivideQuad() {
-			bool exitLoop = false;
-			for (int i = 0; i < 2048; i++) {
-				if (quadData[i].subdivide == true && exitLoop == false) {
+		void makeParent(Quad *parent) override {
+			if (((parent->posSquare.y - parent->length + maxLength) / (parent->length * 2.0)) / 2.0 == floor(((parent->posSquare.y - parent->length + maxLength) / (parent->length * 2.0)) / 2.0)
+				&& ((parent->posSquare.z - parent->length + maxLength) / (parent->length * 2.0)) / 2.0 == floor(((parent->posSquare.z - parent->length + maxLength) / (parent->length * 2.0)) / 2.0)) {
 
-					quadData[i].draw = false;
-					quadData[i].terrainCalculated = false;
-					quadData[i].subdivide = false;
-					quadData[i].combine = false;
-					Quad temp = quadData[i];
-					counter = 0;
+				parent->draw = false;
+				parent->terrainCalculated = false;
 
-					for (int j = 0; j < 2048; j++) {
-						if (quadData[j].draw == false) {
-							if (counter == 0) {
-								quadData[j].posSquare = double3(squarePosX, temp.posSquare.y - 0.5*temp.length, temp.posSquare.z - 0.5*temp.length);
-								quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
+				for (int j = 0; j < 2048; j++) {
+					if (quadData[j].length == parent->length) {
 
-								// Next apply height
-								double3 tempNormal = quadData[j].pos;
+						if (parent->posSquare.y + parent->length * 2.0 == quadData[j].posSquare.y && parent->posSquare.z == quadData[j].posSquare.z ||
+							parent->posSquare.y + parent->length * 2.0 == quadData[j].posSquare.y && parent->posSquare.z + parent->length * 2.0 == quadData[j].posSquare.z ||
+							parent->posSquare.y == quadData[j].posSquare.y && parent->posSquare.z + parent->length * 2.0 == quadData[j].posSquare.z) {
 
-								quadData[j].pos.x *= maxLength;
-								quadData[j].pos.y *= maxLength;
-								quadData[j].pos.z *= maxLength;
-								quadData[j].length = temp.length / 2.0;
-
-								terrainPoint.generateTerrainPoint(tempNormal);
-
-
-
-								quadData[j].pos.x += terrainPoint.terrain.x;
-								quadData[j].pos.y += terrainPoint.terrain.y;
-								quadData[j].pos.z += terrainPoint.terrain.z;
-
-								quadData[j].subdivide = false;
-								quadData[j].combine = false;
-								quadData[j].draw = true;
-								quadData[j].firstUpdate = true;
-								counter++;
-							}
-							else if (counter == 1) {
-								quadData[j].posSquare = double3(squarePosX, temp.posSquare.y + 0.5*temp.length, temp.posSquare.z - 0.5*temp.length);
-								quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
-
-								// Next apply height
-								double3 tempNormal = quadData[j].pos;
-
-								quadData[j].pos.x *= maxLength;
-								quadData[j].pos.y *= maxLength;
-								quadData[j].pos.z *= maxLength;
-								quadData[j].length = temp.length / 2.0;
-
-								terrainPoint.generateTerrainPoint(tempNormal);
-
-
-
-								quadData[j].pos.x += terrainPoint.terrain.x;
-								quadData[j].pos.y += terrainPoint.terrain.y;
-								quadData[j].pos.z += terrainPoint.terrain.z;
-
-								quadData[j].subdivide = false;
-								quadData[j].combine = false;
-								quadData[j].draw = true;
-								quadData[j].firstUpdate = true;
-								counter++;
-							}
-							else if (counter == 2) {
-								quadData[j].posSquare = double3(squarePosX, temp.posSquare.y + 0.5*temp.length, temp.posSquare.z + 0.5*temp.length);
-								quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
-
-								// Next apply height
-								double3 tempNormal = quadData[j].pos;
-
-								quadData[j].pos.x *= maxLength;
-								quadData[j].pos.y *= maxLength;
-								quadData[j].pos.z *= maxLength;
-								quadData[j].length = temp.length / 2.0;
-
-								terrainPoint.generateTerrainPoint(tempNormal);
-
-
-
-								quadData[j].pos.x += terrainPoint.terrain.x;
-								quadData[j].pos.y += terrainPoint.terrain.y;
-								quadData[j].pos.z += terrainPoint.terrain.z;
-
-								quadData[j].subdivide = false;
-								quadData[j].combine = false;
-								quadData[j].draw = true;
-								quadData[j].firstUpdate = true;
-								counter++;
-							}
-							else if (counter == 3) {
-								quadData[j].posSquare = double3(squarePosX, temp.posSquare.y - 0.5*temp.length, temp.posSquare.z + 0.5*temp.length);
-								quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
-
-								// Next apply height
-								double3 tempNormal = quadData[j].pos;
-
-								quadData[j].pos.x *= maxLength;
-								quadData[j].pos.y *= maxLength;
-								quadData[j].pos.z *= maxLength;
-								quadData[j].length = temp.length / 2.0;
-
-								terrainPoint.generateTerrainPoint(tempNormal);
-
-
-
-								quadData[j].pos.x += terrainPoint.terrain.x;
-								quadData[j].pos.y += terrainPoint.terrain.y;
-								quadData[j].pos.z += terrainPoint.terrain.z;
-
-								quadData[j].subdivide = false;
-								quadData[j].combine = false;
-								quadData[j].draw = true;
-								quadData[j].firstUpdate = true;
-								counter++;
-								exitLoop = true;
-							}
+							quadData[j].combine = false;
+							quadData[j].draw = false;
+							quadData[j].terrainCalculated = false;
 						}
 					}
 				}
+
+				parent->posSquare.y += parent->length;
+				parent->posSquare.z += parent->length;
+				setParent(parent);
 			}
 		}
-
-		void combineQuad() {
-			for (double k = minLength; k < maxLength; k *= 2.0) {
-				for (int i = 0; i < 2048; i++) {
-					if (quadData[i].combine == true && quadData[i].length == k) { ///////////////////////// recombine in order from least length to greatest length, update the quadData member that was just changed
-
-						if (((quadData[i].posSquare.y - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0 == floor(((quadData[i].posSquare.y - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0)
-							&& ((quadData[i].posSquare.z - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0 == floor(((quadData[i].posSquare.z - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0)) {
-
-							quadData[i].draw = false;
-							quadData[i].terrainCalculated = false;
-
-							for (int j = 0; j < 2048; j++) {
-								if (quadData[j].length == quadData[i].length) {
-
-									if (quadData[i].posSquare.y + quadData[i].length * 2.0 == quadData[j].posSquare.y && quadData[i].posSquare.z == quadData[j].posSquare.z) {
-										quadData[j].combine = false;
-										quadData[j].draw = false;
-										quadData[j].terrainCalculated = false;
-									}
-									else if (quadData[i].posSquare.y + quadData[i].length * 2.0 == quadData[j].posSquare.y && quadData[i].posSquare.z + quadData[i].length * 2.0 == quadData[j].posSquare.z) {
-										quadData[j].combine = false;
-										quadData[j].draw = false;
-										quadData[j].terrainCalculated = false;
-									}
-									else if (quadData[i].posSquare.y == quadData[j].posSquare.y && quadData[i].posSquare.z + quadData[i].length * 2.0 == quadData[j].posSquare.z) {
-										quadData[j].combine = false;
-										quadData[j].draw = false;
-										quadData[j].terrainCalculated = false;
-									}
-
-								}
-							}
-
-							quadData[i].posSquare.y += quadData[i].length;
-							quadData[i].posSquare.z += quadData[i].length;
-							quadData[i].pos = spherize(double3(quadData[i].posSquare.x / maxLength, quadData[i].posSquare.y / maxLength, quadData[i].posSquare.z / maxLength));
-
-							// Next apply height
-							double3 tempNormal = quadData[i].pos;
-
-							quadData[i].pos.x *= maxLength;
-							quadData[i].pos.y *= maxLength;
-							quadData[i].pos.z *= maxLength;
-
-							terrainPoint.generateTerrainPoint(tempNormal);
-
-
-
-							quadData[i].pos.x += terrainPoint.terrain.x;
-							quadData[i].pos.y += terrainPoint.terrain.y;
-							quadData[i].pos.z += terrainPoint.terrain.z;
-
-							quadData[i].length *= 2.0;
-
-							quadData[i].subdivide = false;
-							quadData[i].combine = false;
-							quadData[i].draw = true;
-							quadData[i].firstUpdate = true;
-							quadData[i].update();
-						}
-					}
-				}
-			}
-		}
-
-		void updateQuad() {
-			subdivideQuad();
-			combineQuad();
-		}
-
-		void create(double squarePos_x) {
-			squarePosX = squarePos_x;
-
-			for (int i = 0; i < 2048; i++) {
-				quadData[i].draw = false;
-				quadData[i].terrainCalculated = false;
-				quadData[i].firstUpdate = false;
-			}
-			quadData[0].draw = true;
-			quadData[0].firstUpdate = true;
-
-			quadData[0] = Quad(double3(squarePosX, 0.0, 0.0), double3(squarePosX, 0.0, 0.0), maxLength);
-			quadData[0].update();
-
-
-			for (int i = 0; i < 2048; i++)
-				quadData[i].create('x');
-		}
-
-		void update(double3 camPos) {
-			updateQuad();
-
-			double eyeRange = sqrt(positive(camPos.x*camPos.x + camPos.y*camPos.y + camPos.z*camPos.z - maxLength*maxLength))*1.05;
-			if (eyeRange < 8000.0)
-				eyeRange = 8000.0;
-
-
-
-
-			for (int i = 0; i < 2048; i++) {
-				if (quadData[i].draw == true) {
-					quadData[i].update();
-
-					if (quadData[i].firstUpdate == true) {
-						quadData[i].firstCamPos = camPos;
-						quadData[i].updateChunkData('x');
-
-						quadData[i].firstUpdate = false;
-					}
-
-					quadData[i].transform(camPos);
-				}
-			}
-		}
-
-		void draw() {
-			double eyeRange = sqrt(positive(camPos.x*camPos.x + camPos.y*camPos.y + camPos.z*camPos.z - maxLength*maxLength))*1.05;
-			if (eyeRange < 8000.0)
-				eyeRange = 8000.0;
-
-			for (int i = 0; i < 2048; i++) {
-				if (quadData[i].draw == true && quadData[i].distance < eyeRange) {
-					quadData[i].drawTerrain();
-				}
-			}
-		}
-
-		void cleanUp() {
-			for (int i = 0; i < 2048; i++)
-				quadData[i].cleanUp();
-		}
-
 	}sideX0, sideX1;
 
 
-	class SideZ {
-	public:
-		Quad quadData[2048];
-		double squarePosZ;
+	class SideZ : public Side {
+		void makeChild(Quad *child, Quad parent) override {
+			if (counter == 0) {
+				child->posSquare = double3(parent.posSquare.x - 0.5*parent.length, parent.posSquare.y - 0.5*parent.length, squarePosSide);
+				setChildData(child, parent);
+				counter++;
+			}
+			else if (counter == 1) {
+				child->posSquare = double3(parent.posSquare.x + 0.5*parent.length, parent.posSquare.y - 0.5*parent.length, squarePosSide);
+				setChildData(child, parent);
+				counter++;
+			}
+			else if (counter == 2) {
+				child->posSquare = double3(parent.posSquare.x + 0.5*parent.length, parent.posSquare.y + 0.5*parent.length, squarePosSide);
+				setChildData(child, parent);
+				counter++;
+			}
+			else if (counter == 3) {
+				child->posSquare = double3(parent.posSquare.x - 0.5*parent.length, parent.posSquare.y + 0.5*parent.length, squarePosSide);
+				setChildData(child, parent);
+				counter++;
+				exitLoop = true;
+			}
+		}
 
-		void subdivideQuad() {
-			bool exitLoop = false;
-			for (int i = 0; i < 2048; i++) {
-				if (quadData[i].subdivide == true && exitLoop == false) {
+		void makeParent(Quad *parent) override {
+			if (((parent->posSquare.x - parent->length + maxLength) / (parent->length * 2.0)) / 2.0 == floor(((parent->posSquare.x - parent->length + maxLength) / (parent->length * 2.0)) / 2.0)
+				&& ((parent->posSquare.y - parent->length + maxLength) / (parent->length * 2.0)) / 2.0 == floor(((parent->posSquare.y - parent->length + maxLength) / (parent->length * 2.0)) / 2.0)) {
 
-					quadData[i].draw = false;
-					quadData[i].terrainCalculated = false;
-					quadData[i].subdivide = false;
-					quadData[i].combine = false;
-					Quad temp = quadData[i];
-					counter = 0;
+				parent->draw = false;
+				parent->terrainCalculated = false;
 
-					for (int j = 0; j < 2048; j++) {
-						if (quadData[j].draw == false) {
-							if (counter == 0) {
-								quadData[j].posSquare = double3(temp.posSquare.x - 0.5*temp.length, temp.posSquare.y - 0.5*temp.length, squarePosZ);
-								quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
+				for (int j = 0; j < 2048; j++) {
+					if (quadData[j].draw == true && quadData[j].length == parent->length) {
 
-								// Next apply height
-								double3 tempNormal = quadData[j].pos;
+						if (parent->posSquare.x + parent->length * 2.0 == quadData[j].posSquare.x && parent->posSquare.y == quadData[j].posSquare.y ||
+							parent->posSquare.x + parent->length * 2.0 == quadData[j].posSquare.x && parent->posSquare.y + parent->length * 2.0 == quadData[j].posSquare.y ||
+							parent->posSquare.x == quadData[j].posSquare.x && parent->posSquare.y + parent->length * 2.0 == quadData[j].posSquare.y) {
 
-								quadData[j].pos.x *= maxLength;
-								quadData[j].pos.y *= maxLength;
-								quadData[j].pos.z *= maxLength;
-								quadData[j].length = temp.length / 2.0;
-
-								terrainPoint.generateTerrainPoint(tempNormal);
-
-
-
-								quadData[j].pos.x += terrainPoint.terrain.x;
-								quadData[j].pos.y += terrainPoint.terrain.y;
-								quadData[j].pos.z += terrainPoint.terrain.z;
-
-								quadData[j].subdivide = false;
-								quadData[j].combine = false;
-								quadData[j].draw = true;
-								quadData[j].firstUpdate = true;
-								counter++;
-							}
-							else if (counter == 1) {
-								quadData[j].posSquare = double3(temp.posSquare.x + 0.5*temp.length, temp.posSquare.y - 0.5*temp.length, squarePosZ);
-								quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
-
-								// Next apply height
-								double3 tempNormal = quadData[j].pos;
-
-								quadData[j].pos.x *= maxLength;
-								quadData[j].pos.y *= maxLength;
-								quadData[j].pos.z *= maxLength;
-								quadData[j].length = temp.length / 2.0;
-
-								terrainPoint.generateTerrainPoint(tempNormal);
-
-
-
-								quadData[j].pos.x += terrainPoint.terrain.x;
-								quadData[j].pos.y += terrainPoint.terrain.y;
-								quadData[j].pos.z += terrainPoint.terrain.z;
-
-								quadData[j].subdivide = false;
-								quadData[j].combine = false;
-								quadData[j].draw = true;
-								quadData[j].firstUpdate = true;
-								counter++;
-							}
-							else if (counter == 2) {
-								quadData[j].posSquare = double3(temp.posSquare.x + 0.5*temp.length, temp.posSquare.y + 0.5*temp.length, squarePosZ);
-								quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
-
-								// Next apply height
-								double3 tempNormal = quadData[j].pos;
-
-								quadData[j].pos.x *= maxLength;
-								quadData[j].pos.y *= maxLength;
-								quadData[j].pos.z *= maxLength;
-								quadData[j].length = temp.length / 2.0;
-
-								terrainPoint.generateTerrainPoint(tempNormal);
-
-
-
-								quadData[j].pos.x += terrainPoint.terrain.x;
-								quadData[j].pos.y += terrainPoint.terrain.y;
-								quadData[j].pos.z += terrainPoint.terrain.z;
-
-								quadData[j].subdivide = false;
-								quadData[j].combine = false;
-								quadData[j].draw = true;
-								quadData[j].firstUpdate = true;
-								counter++;
-							}
-							else if (counter == 3) {
-								quadData[j].posSquare = double3(temp.posSquare.x - 0.5*temp.length, temp.posSquare.y + 0.5*temp.length, squarePosZ);
-								quadData[j].pos = spherize(double3(quadData[j].posSquare.x / maxLength, quadData[j].posSquare.y / maxLength, quadData[j].posSquare.z / maxLength));
-
-								// Next apply height
-								double3 tempNormal = quadData[j].pos;
-
-								quadData[j].pos.x *= maxLength;
-								quadData[j].pos.y *= maxLength;
-								quadData[j].pos.z *= maxLength;
-								quadData[j].length = temp.length / 2.0;
-
-								terrainPoint.generateTerrainPoint(tempNormal);
-
-
-
-								quadData[j].pos.x += terrainPoint.terrain.x;
-								quadData[j].pos.y += terrainPoint.terrain.y;
-								quadData[j].pos.z += terrainPoint.terrain.z;
-
-								quadData[j].subdivide = false;
-								quadData[j].combine = false;
-								quadData[j].draw = true;
-								quadData[j].firstUpdate = true;
-								counter++;
-								exitLoop = true;
-							}
+							quadData[j].combine = false;
+							quadData[j].draw = false;
+							quadData[j].terrainCalculated = false;
 						}
 					}
 				}
+
+				parent->posSquare.x += parent->length;
+				parent->posSquare.y += parent->length;
+				setParent(parent);
 			}
 		}
-
-		void combineQuad() {
-			for (double k = minLength; k < maxLength; k *= 2.0) {
-				for (int i = 0; i < 2048; i++) {
-					if (quadData[i].combine == true && quadData[i].length == k) { ///////////////////////// recombine in order from least length to greatest length, update the quadData member that was just changed
-
-						if (((quadData[i].posSquare.x - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0 == floor(((quadData[i].posSquare.x - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0)
-							&& ((quadData[i].posSquare.y - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0 == floor(((quadData[i].posSquare.y - quadData[i].length + maxLength) / (quadData[i].length * 2.0)) / 2.0)) {
-
-							quadData[i].draw = false;
-							quadData[i].terrainCalculated = false;
-
-							for (int j = 0; j < 2048; j++) {
-								if (quadData[j].draw == true && quadData[j].length == quadData[i].length) {
-
-									if (quadData[i].posSquare.x + quadData[i].length * 2.0 == quadData[j].posSquare.x && quadData[i].posSquare.y == quadData[j].posSquare.y) {
-										quadData[j].combine = false;
-										quadData[j].draw = false;
-										quadData[j].terrainCalculated = false;
-									}
-									else if (quadData[i].posSquare.x + quadData[i].length * 2.0 == quadData[j].posSquare.x && quadData[i].posSquare.y + quadData[i].length * 2.0 == quadData[j].posSquare.y) {
-										quadData[j].combine = false;
-										quadData[j].draw = false;
-										quadData[j].terrainCalculated = false;
-									}
-									else if (quadData[i].posSquare.x == quadData[j].posSquare.x && quadData[i].posSquare.y + quadData[i].length * 2.0 == quadData[j].posSquare.y) {
-										quadData[j].combine = false;
-										quadData[j].draw = false;
-										quadData[j].terrainCalculated = false;
-									}
-
-								}
-							}
-
-							quadData[i].posSquare.x += quadData[i].length;
-							quadData[i].posSquare.y += quadData[i].length;
-							quadData[i].pos = spherize(double3(quadData[i].posSquare.x / maxLength, quadData[i].posSquare.y / maxLength, quadData[i].posSquare.z / maxLength));
-
-							// Next apply height
-							double3 tempNormal = quadData[i].pos;
-
-							quadData[i].pos.x *= maxLength;
-							quadData[i].pos.y *= maxLength;
-							quadData[i].pos.z *= maxLength;
-
-							terrainPoint.generateTerrainPoint(tempNormal);
-
-
-
-							quadData[i].pos.x += terrainPoint.terrain.x;
-							quadData[i].pos.y += terrainPoint.terrain.y;
-							quadData[i].pos.z += terrainPoint.terrain.z;
-
-							quadData[i].length *= 2.0;
-
-							quadData[i].subdivide = false;
-							quadData[i].combine = false;
-							quadData[i].draw = true;
-							quadData[i].firstUpdate = true;
-							quadData[i].update();
-						}
-					}
-				}
-			}
-		}
-
-		void updateQuad() {
-			subdivideQuad();
-			combineQuad();
-		}
-
-		void create(double squarePos_z) {
-			squarePosZ = squarePos_z;
-
-			for (int i = 0; i < 2048; i++) {
-				quadData[i].draw = false;
-				quadData[i].terrainCalculated = false;
-				quadData[i].firstUpdate = false;
-			}
-			quadData[0].draw = true;
-			quadData[0].firstUpdate = true;
-
-			quadData[0] = Quad(double3(0.0, 0.0, squarePosZ), double3(0.0, 0.0, squarePosZ), maxLength);
-			quadData[0].update();
-
-			for (int i = 0; i < 2048; i++)
-				quadData[i].create('z');
-		}
-
-		void update(double3 camPos) {
-			updateQuad();
-
-			double eyeRange = sqrt(positive(camPos.x*camPos.x + camPos.y*camPos.y + camPos.z*camPos.z - maxLength*maxLength))*1.05;
-			if (eyeRange < 8000.0)
-				eyeRange = 8000.0;
-
-
-
-
-			for (int i = 0; i < 2048; i++) {
-				if (quadData[i].draw == true) {
-					quadData[i].update();
-
-					if (quadData[i].firstUpdate == true) {
-						quadData[i].firstCamPos = camPos;
-						quadData[i].updateChunkData('z');
-
-						quadData[i].firstUpdate = false;
-					}
-
-					quadData[i].transform(camPos);
-				}
-			}
-		}
-
-		void draw() {
-			double eyeRange = sqrt(positive(camPos.x*camPos.x + camPos.y*camPos.y + camPos.z*camPos.z - maxLength*maxLength))*1.05;
-			if (eyeRange < 8000.0)
-				eyeRange = 8000.0;
-
-			for (int i = 0; i < 2048; i++) {
-				if (quadData[i].draw == true && quadData[i].distance < eyeRange) {
-					quadData[i].drawTerrain();
-				}
-			}
-		}
-
-		void cleanUp() {
-			for (int i = 0; i < 2048; i++)
-				quadData[i].cleanUp();
-		}
-
 	}sideZ0, sideZ1;
 
 
 public:
 
 	void init() {
-		sideY0.create(-maxLength);
-		sideY1.create(maxLength);
-		sideX0.create(-maxLength);
-		sideX1.create(maxLength);
-		sideZ0.create(-maxLength);
-		sideZ1.create(maxLength);
+		sideY0.create(-maxLength, 'y');
+		sideY1.create(maxLength, 'y');
+		sideX0.create(-maxLength, 'x');
+		sideX1.create(maxLength, 'x');
+		sideZ0.create(-maxLength, 'z');
+		sideZ1.create(maxLength, 'z');
 	}
 
 	void update() {
-		sideY0.update(camPos);
-		sideY1.update(camPos);
-		sideX0.update(camPos);
-		sideX1.update(camPos);
-		sideZ0.update(camPos);
-		sideZ1.update(camPos);
+		sideY0.update(camPos, 'y');
+		sideY1.update(camPos, 'y');
+		sideX0.update(camPos, 'x');
+		sideX1.update(camPos, 'x');
+		sideZ0.update(camPos, 'z');
+		sideZ1.update(camPos, 'z');
 	}
 
 	void draw() {
