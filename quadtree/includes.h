@@ -442,7 +442,7 @@ double dotProduct(double3 a2, double3 b2) {
 }
 
 XMFLOAT3 crossProduct(XMFLOAT3 a, XMFLOAT3 b){
-	return XMFLOAT3(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.y*b.z - a.z*b.y);
+	return XMFLOAT3(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x);
 }
 
 inline bool exists(const std::string& name) {

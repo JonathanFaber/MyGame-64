@@ -198,8 +198,7 @@ public:
 			for (int z = 0; z < chunkLength; z++) {
 				for (int x = 0; x < chunkLength; x++) {
 					for (int i = 0; i < 2; i++) {
-						if (i == 0) {
-							
+						if (i == 0) {						
 							V.x = verticesFinal[(z+1) * (chunkLength + 1) + x+1].pos.x - verticesFinal[(z) * (chunkLength + 1) + x].pos.x;
 							V.y = verticesFinal[(z+1) * (chunkLength + 1) + x+1].pos.y - verticesFinal[(z) * (chunkLength + 1) + x].pos.y;
 							V.z = verticesFinal[(z+1) * (chunkLength + 1) + x+1].pos.z - verticesFinal[(z) * (chunkLength + 1) + x].pos.z;
@@ -218,54 +217,12 @@ public:
 						f_normals[i][x][z] = crossProduct(V, W);
 						f_normals[i][x][z] = normalize(f_normals[i][x][z]);
 
-						if (side == 'y') {
-							if (posSquare.y >= 0.0) {
-								if (f_normals[i][x][z].y < 0.0) {
-									f_normals[i][x][z].x *= -1;
-									f_normals[i][x][z].y *= -1;
-									f_normals[i][x][z].z *= -1;
-								}
-							}
-							else if (posSquare.y < 0.0) {
-								if (f_normals[i][x][z].y > 0.0) {
-									f_normals[i][x][z].x *= -1;
-									f_normals[i][x][z].y *= -1;
-									f_normals[i][x][z].z *= -1;
-								}
-							}
+						if (dotProduct(f_normals[i][x][z], XMFLOAT3(pos.x, pos.y, pos.z)) < 0.0f) {
+							f_normals[i][x][z].x *= -1;
+							f_normals[i][x][z].y *= -1;
+							f_normals[i][x][z].z *= -1;
 						}
-						else if (side == 'x') {
-							if (posSquare.x >= 0.0) {
-								if (f_normals[i][x][z].x < 0.0) {
-									f_normals[i][x][z].x *= -1;
-									f_normals[i][x][z].y *= -1;
-									f_normals[i][x][z].z *= -1;
-								}
-							}
-							else if (posSquare.x < 0.0) {
-								if (f_normals[i][x][z].x > 0.0) {
-									f_normals[i][x][z].x *= -1;
-									f_normals[i][x][z].y *= -1;
-									f_normals[i][x][z].z *= -1;
-								}
-							}
-						}
-						else {
-							if (posSquare.z >= 0.0) {
-								if (f_normals[i][x][z].z < 0.0) {
-									f_normals[i][x][z].x *= -1;
-									f_normals[i][x][z].y *= -1;
-									f_normals[i][x][z].z *= -1;
-								}
-							}
-							else if (posSquare.z < 0.0) {
-								if (f_normals[i][x][z].z > 0.0) {
-									f_normals[i][x][z].x *= -1;
-									f_normals[i][x][z].y *= -1;
-									f_normals[i][x][z].z *= -1;
-								}
-							}
-						}
+
 					}
 				}
 			}
@@ -296,7 +253,8 @@ public:
 						normals[x][z].z = f_normals[0][x][z].z + f_normals[1][x][z].z;
 						normals[x][z] = normalize(normals[x][z]);
 					}
-					verticesFinal[z * (chunkLength + 1) + x].normal = XMFLOAT3(float(normals[x][z].x), float(normals[x][z].y), float(normals[x][z].z));
+
+					verticesFinal[z * (chunkLength + 1) + x].normal = normals[x][z];
 				}
 			}
 			//*/
