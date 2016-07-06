@@ -198,21 +198,21 @@ public:
 			for (int z = 0; z < chunkLength; z++) {
 				for (int x = 0; x < chunkLength; x++) {
 					for (int i = 0; i < 2; i++) {
-						if (i == 0) {						
-							V.x = verticesFinal[(z+1) * (chunkLength + 1) + x+1].pos.x - verticesFinal[(z) * (chunkLength + 1) + x].pos.x;
-							V.y = verticesFinal[(z+1) * (chunkLength + 1) + x+1].pos.y - verticesFinal[(z) * (chunkLength + 1) + x].pos.y;
-							V.z = verticesFinal[(z+1) * (chunkLength + 1) + x+1].pos.z - verticesFinal[(z) * (chunkLength + 1) + x].pos.z;
-							W.x = verticesFinal[(z) * (chunkLength + 1) + x+1].pos.x - verticesFinal[(z) * (chunkLength + 1) + x].pos.x;
-							W.y = verticesFinal[(z) * (chunkLength + 1) + x+1].pos.y - verticesFinal[(z) * (chunkLength + 1) + x].pos.y;
-							W.z = verticesFinal[(z) * (chunkLength + 1) + x+1].pos.z - verticesFinal[(z) * (chunkLength + 1) + x].pos.z;
+						if (i == 0) {
+							V.x = verticesFinal[(z + 1) * (chunkLength + 1) + x + 1].pos.x - verticesFinal[(z) * (chunkLength + 1) + x].pos.x;
+							V.y = verticesFinal[(z + 1) * (chunkLength + 1) + x + 1].pos.y - verticesFinal[(z) * (chunkLength + 1) + x].pos.y;
+							V.z = verticesFinal[(z + 1) * (chunkLength + 1) + x + 1].pos.z - verticesFinal[(z) * (chunkLength + 1) + x].pos.z;
+							W.x = verticesFinal[(z) * (chunkLength + 1) + x + 1].pos.x - verticesFinal[(z) * (chunkLength + 1) + x].pos.x;
+							W.y = verticesFinal[(z) * (chunkLength + 1) + x + 1].pos.y - verticesFinal[(z) * (chunkLength + 1) + x].pos.y;
+							W.z = verticesFinal[(z) * (chunkLength + 1) + x + 1].pos.z - verticesFinal[(z) * (chunkLength + 1) + x].pos.z;
 						}
 						if (i == 1) {
-							V.x = verticesFinal[(z+1) * (chunkLength + 1) + x+1].pos.x - verticesFinal[(z) * (chunkLength + 1) + x].pos.x;
-							V.y = verticesFinal[(z+1) * (chunkLength + 1) + x+1].pos.y - verticesFinal[(z) * (chunkLength + 1) + x].pos.y;
-							V.z = verticesFinal[(z+1) * (chunkLength + 1) + x+1].pos.z - verticesFinal[(z) * (chunkLength + 1) + x].pos.z;
-							W.x = verticesFinal[(z+1) * (chunkLength + 1) + x].pos.x - verticesFinal[(z) * (chunkLength + 1) + x].pos.x;
-							W.y = verticesFinal[(z+1) * (chunkLength + 1) + x].pos.y - verticesFinal[(z) * (chunkLength + 1) + x].pos.y;
-							W.z = verticesFinal[(z+1) * (chunkLength + 1) + x].pos.z - verticesFinal[(z) * (chunkLength + 1) + x].pos.z;
+							V.x = verticesFinal[(z + 1) * (chunkLength + 1) + x + 1].pos.x - verticesFinal[(z) * (chunkLength + 1) + x].pos.x;
+							V.y = verticesFinal[(z + 1) * (chunkLength + 1) + x + 1].pos.y - verticesFinal[(z) * (chunkLength + 1) + x].pos.y;
+							V.z = verticesFinal[(z + 1) * (chunkLength + 1) + x + 1].pos.z - verticesFinal[(z) * (chunkLength + 1) + x].pos.z;
+							W.x = verticesFinal[(z + 1) * (chunkLength + 1) + x].pos.x - verticesFinal[(z) * (chunkLength + 1) + x].pos.x;
+							W.y = verticesFinal[(z + 1) * (chunkLength + 1) + x].pos.y - verticesFinal[(z) * (chunkLength + 1) + x].pos.y;
+							W.z = verticesFinal[(z + 1) * (chunkLength + 1) + x].pos.z - verticesFinal[(z) * (chunkLength + 1) + x].pos.z;
 						}
 						f_normals[i][x][z] = crossProduct(V, W);
 						f_normals[i][x][z] = normalize(f_normals[i][x][z]);
@@ -331,9 +331,11 @@ public:
 		bool exitLoop;
 		Quad *quadData;
 		double squarePosSide;
+		char side;
 
 		virtual void makeChild(Quad *child, Quad parent) = 0;
 		virtual void makeParent(Quad *parent) = 0;
+		virtual void setSide() = 0;
 
 		static void setChildData(Quad *child, Quad parent) {
 			child->pos = spherize(child->posSquare / maxLength);
@@ -377,19 +379,24 @@ public:
 
 		void subdivideQuad() {
 			exitLoop = false;
-			for (int i = 0; i < 2048; i++) {
-				if (quadData[i].subdivide == true && exitLoop == false) {
+			for (int h = 0; h < 2; h++) {
+				for (int i = 0; i < 2048; i++) {
+					if (exitLoop == false) {
+						if (quadData[i].subdivide == true) {
+							if ((h == 0 && dotProduct(quadData[i].posAway, camDir) > 0.5) || h == 1) {
+								quadData[i].draw = false;
+								quadData[i].terrainCalculated = false;
+								quadData[i].subdivide = false;
+								quadData[i].combine = false;
+								Quad parent = quadData[i];
+								counter = 0;
 
-					quadData[i].draw = false;
-					quadData[i].terrainCalculated = false;
-					quadData[i].subdivide = false;
-					quadData[i].combine = false;
-					Quad parent = quadData[i];
-					counter = 0;
-
-					for (int j = 0; j < 2048; j++) {
-						if (quadData[j].draw == false) {
-							makeChild(&quadData[j], parent);
+								for (int j = 0; j < 2048; j++) {
+									if (quadData[j].draw == false) {
+										makeChild(&quadData[j], parent);
+									}
+								}
+							}
 						}
 					}
 				}
@@ -406,7 +413,7 @@ public:
 			}
 		}
 
-		void create(double squarePos, char side) {
+		void create(double squarePos) {
 			quadData = new Quad[2048];
 			squarePosSide = squarePos;
 
@@ -417,6 +424,8 @@ public:
 			}
 			quadData[0].draw = true;
 			quadData[0].firstUpdate = true;
+
+			setSide();
 
 			if (side == 'y')
 				quadData[0] = Quad(double3(0.0, squarePosSide, 0.0), double3(0.0, squarePosSide, 0.0), maxLength);
@@ -431,7 +440,7 @@ public:
 				quadData[i].create(side);
 		}
 
-		void update(double3 camPos, char side) {
+		void update(double3 camPos) {
 			subdivideQuad();
 			combineQuad();
 
@@ -458,7 +467,7 @@ public:
 
 			for (int i = 0; i < 2048; i++) {
 				if (quadData[i].draw == true && quadData[i].distance < eyeRange) {
-					if (dotProduct(quadData[i].posAway, camDir) > 0.5 || quadData[i].distance < 40.0 || speed > 100.0)
+					if (dotProduct(quadData[i].posAway, camDir) > 0.5 || quadData[i].distance < quadData[i].length * 2.0)
 						quadData[i].drawTerrain();
 				}
 			}
@@ -473,6 +482,10 @@ public:
 	};
 
 	class SideY : public Side {
+		void setSide() {
+			side = 'y';
+		}
+
 		void makeChild(Quad *child, Quad parent) {
 			if (counter == 0) {
 				child->posSquare = double3(parent.posSquare.x - 0.5*parent.length, squarePosSide, parent.posSquare.z - 0.5*parent.length);
@@ -528,6 +541,10 @@ public:
 
 
 	class SideX : public Side {
+		void setSide() {
+			side = 'x';
+		}
+
 		void makeChild(Quad *child, Quad parent) {
 			if (counter == 0) {
 				child->posSquare = double3(squarePosSide, parent.posSquare.y - 0.5*parent.length, parent.posSquare.z - 0.5*parent.length);
@@ -582,6 +599,10 @@ public:
 
 
 	class SideZ : public Side {
+		void setSide() {
+			side = 'z';
+		}
+
 		void makeChild(Quad *child, Quad parent) {
 			if (counter == 0) {
 				child->posSquare = double3(parent.posSquare.x - 0.5*parent.length, parent.posSquare.y - 0.5*parent.length, squarePosSide);
@@ -638,21 +659,21 @@ public:
 public:
 
 	void init() {
-		sideY0.create(-maxLength, 'y');
-		sideY1.create(maxLength, 'y');
-		sideX0.create(-maxLength, 'x');
-		sideX1.create(maxLength, 'x');
-		sideZ0.create(-maxLength, 'z');
-		sideZ1.create(maxLength, 'z');
+		sideY0.create(-maxLength);
+		sideY1.create(maxLength);
+		sideX0.create(-maxLength);
+		sideX1.create(maxLength);
+		sideZ0.create(-maxLength);
+		sideZ1.create(maxLength);
 	}
 
 	void update() {
-		sideY0.update(camPos, 'y');
-		sideY1.update(camPos, 'y');
-		sideX0.update(camPos, 'x');
-		sideX1.update(camPos, 'x');
-		sideZ0.update(camPos, 'z');
-		sideZ1.update(camPos, 'z');
+		sideY0.update(camPos);
+		sideY1.update(camPos);
+		sideX0.update(camPos);
+		sideX1.update(camPos);
+		sideZ0.update(camPos);
+		sideZ1.update(camPos);
 	}
 
 	void draw() {

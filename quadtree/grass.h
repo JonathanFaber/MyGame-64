@@ -798,7 +798,7 @@ public:
 
 								float tempLength = vLength(temp);
 								if (tempLength < 50.0) {
-									if (dotProduct(XMFLOAT3(temp.x / tempLength, temp.y / tempLength, temp.z / tempLength), XMFLOAT3(camDir.x, camDir.y, camDir.z)) > 0.5f || tempLength < 10.0) {
+									if (dotProduct(XMFLOAT3(temp.x / tempLength, temp.y / tempLength, temp.z / tempLength), XMFLOAT3(camDir.x, camDir.y, camDir.z)) > 0.5f || tempLength < 5.0) {
 										grassPos[counter].instancePos = XMFLOAT2(float(temp.x), float(temp.z));
 										grassPos[counter].instanceHeights.x = float(temp.y);
 										grassPos[counter].instanceHeights.y = float(temp.y);
