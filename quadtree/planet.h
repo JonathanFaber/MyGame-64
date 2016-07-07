@@ -55,6 +55,7 @@ public:
 
 	public:
 		PlanetVertex verticesFinal[(chunkLength + 1)*(chunkLength + 1)];
+		XMFLOAT3 positions[chunkLength + 3][chunkLength + 3];
 		double3 firstCamPos;
 		bool terrainCalculated;
 		bool firstUpdate;
@@ -141,15 +142,17 @@ public:
 		}
 
 		void updateChunkData(char side) {
-			for (int z = 0; z < (chunkLength + 1); z++) {
-				for (int x = 0; x < (chunkLength + 1); x++) {
+			counter = 0;
+			for (int z = 0; z < (chunkLength + 3); z++) {
+				for (int x = 0; x < (chunkLength + 3); x++) {
 					double3 temp = posSquare;
 
-
-
-					temp.x = double(verticesInitial[z * (chunkLength + 1) + x].pos.x) * length;
-					temp.y = double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * length;
-					temp.z = double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * length;
+					if (side == 'y')
+						temp = double3((x - 1 - chunkLength / 2) / 16.0 * length, 0.0, (z - 1 - chunkLength / 2) / 16.0 * length);
+					else if (side == 'x')
+						temp = double3(0.0, (z - 1 - chunkLength / 2) / 16.0 * length, (x - 1 - chunkLength / 2) / 16.0 * length);
+					else
+						temp = double3((x - 1 - chunkLength / 2) / 16.0 * length, (z - 1 - chunkLength / 2) / 16.0 * length, 0.0);
 
 					temp = temp + posSquare;
 
@@ -168,51 +171,51 @@ public:
 
 					terrainPoint.generateTerrainPoint(tempNormal);
 
-					verticesFinal[z * (chunkLength + 1) + x].height = terrainPoint.height_f;
-					verticesFinal[z * (chunkLength + 1) + x].landTypeHeight = terrainPoint.landTypeHeight_f;
-
 					temp = temp + terrainPoint.terrain;
+					temp = temp - firstCamPos;
 
+					positions[x][z] = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
 
+					if (x != 0 && z != 0 && x != chunkLength + 2 && z != chunkLength + 2) {
+						verticesFinal[counter].pos = positions[x][z];
+						if (side == 'y')
+							verticesFinal[counter].texCoord = XMFLOAT2(float(double(verticesInitial[counter].pos.x) * length), float(double(verticesInitial[counter].pos.z) * length));
+						else if (side == 'x')
+							verticesFinal[counter].texCoord = XMFLOAT2(float(double(verticesInitial[counter].pos.z) * length), float(double(verticesInitial[counter].pos.y) * length));
+						else
+							verticesFinal[counter].texCoord = XMFLOAT2(float(double(verticesInitial[counter].pos.x) * length), float(double(verticesInitial[counter].pos.y) * length));
 
-					temp.x = temp.x - firstCamPos.x;
-					temp.y = temp.y - firstCamPos.y;
-					temp.z = temp.z - firstCamPos.z;
-
-					verticesFinal[z * (chunkLength + 1) + x].pos = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
-					if (side == 'y')
-						verticesFinal[z * (chunkLength + 1) + x].texCoord = XMFLOAT2(float(double(verticesInitial[z * (chunkLength + 1) + x].pos.x) * length), float(double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * length));
-					else if (side == 'x')
-						verticesFinal[z * (chunkLength + 1) + x].texCoord = XMFLOAT2(float(double(verticesInitial[z * (chunkLength + 1) + x].pos.z) * length), float(double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * length));
-					else
-						verticesFinal[z * (chunkLength + 1) + x].texCoord = XMFLOAT2(float(double(verticesInitial[z * (chunkLength + 1) + x].pos.x) * length), float(double(verticesInitial[z * (chunkLength + 1) + x].pos.y) * length));
+						verticesFinal[counter].height = terrainPoint.height_f;
+						verticesFinal[counter].landTypeHeight = terrainPoint.landTypeHeight_f;
+						counter++;
+					}
 				}
 			}
 
 			XMFLOAT3 V;
 			XMFLOAT3 W;
-			XMFLOAT3 f_normals[2][chunkLength][chunkLength];
+			XMFLOAT3 f_normals[2][chunkLength + 2][chunkLength + 2];
 			XMFLOAT3 normals[chunkLength + 1][chunkLength + 1];
 
 			counter = 0;
-			for (int z = 0; z < chunkLength; z++) {
-				for (int x = 0; x < chunkLength; x++) {
+			for (int z = 0; z < chunkLength + 2; z++) {
+				for (int x = 0; x < chunkLength + 2; x++) {
 					for (int i = 0; i < 2; i++) {
 						if (i == 0) {
-							V.x = verticesFinal[(z + 1) * (chunkLength + 1) + x + 1].pos.x - verticesFinal[(z) * (chunkLength + 1) + x].pos.x;
-							V.y = verticesFinal[(z + 1) * (chunkLength + 1) + x + 1].pos.y - verticesFinal[(z) * (chunkLength + 1) + x].pos.y;
-							V.z = verticesFinal[(z + 1) * (chunkLength + 1) + x + 1].pos.z - verticesFinal[(z) * (chunkLength + 1) + x].pos.z;
-							W.x = verticesFinal[(z) * (chunkLength + 1) + x + 1].pos.x - verticesFinal[(z) * (chunkLength + 1) + x].pos.x;
-							W.y = verticesFinal[(z) * (chunkLength + 1) + x + 1].pos.y - verticesFinal[(z) * (chunkLength + 1) + x].pos.y;
-							W.z = verticesFinal[(z) * (chunkLength + 1) + x + 1].pos.z - verticesFinal[(z) * (chunkLength + 1) + x].pos.z;
+							V.x = positions[x + 1][z + 1].x - positions[x][z].x;
+							V.y = positions[x + 1][z + 1].y - positions[x][z].y;
+							V.z = positions[x + 1][z + 1].z - positions[x][z].z;
+							W.x = positions[x + 1][z].x - positions[x][z].x;
+							W.y = positions[x + 1][z].y - positions[x][z].y;
+							W.z = positions[x + 1][z].z - positions[x][z].z;
 						}
 						if (i == 1) {
-							V.x = verticesFinal[(z + 1) * (chunkLength + 1) + x + 1].pos.x - verticesFinal[(z) * (chunkLength + 1) + x].pos.x;
-							V.y = verticesFinal[(z + 1) * (chunkLength + 1) + x + 1].pos.y - verticesFinal[(z) * (chunkLength + 1) + x].pos.y;
-							V.z = verticesFinal[(z + 1) * (chunkLength + 1) + x + 1].pos.z - verticesFinal[(z) * (chunkLength + 1) + x].pos.z;
-							W.x = verticesFinal[(z + 1) * (chunkLength + 1) + x].pos.x - verticesFinal[(z) * (chunkLength + 1) + x].pos.x;
-							W.y = verticesFinal[(z + 1) * (chunkLength + 1) + x].pos.y - verticesFinal[(z) * (chunkLength + 1) + x].pos.y;
-							W.z = verticesFinal[(z + 1) * (chunkLength + 1) + x].pos.z - verticesFinal[(z) * (chunkLength + 1) + x].pos.z;
+							V.x = positions[x + 1][z + 1].x - positions[x][z].x;
+							V.y = positions[x + 1][z + 1].y - positions[x][z].y;
+							V.z = positions[x + 1][z + 1].z - positions[x][z].z;
+							W.x = positions[x][z + 1].x - positions[x][z].x;
+							W.y = positions[x][z + 1].y - positions[x][z].y;
+							W.z = positions[x][z + 1].z - positions[x][z].z;
 						}
 						f_normals[i][x][z] = crossProduct(V, W);
 						f_normals[i][x][z] = normalize(f_normals[i][x][z]);
@@ -226,61 +229,19 @@ public:
 					}
 				}
 			}
-			//*
-			for (int z = 0; z < chunkLength + 1; z++) {
-				for (int x = 0; x < chunkLength + 1; x++) {
-					if (x != 0 && z != 0 && x != chunkLength && z != chunkLength) {
-						normals[x][z].x = ((f_normals[0][x - 1][z - 1].x + f_normals[1][x - 1][z - 1].x) / 2 + f_normals[0][x - 1][z].x + (f_normals[0][x][z].x + f_normals[1][x][z].x) / 2 + f_normals[1][x][z - 1].x) / 4;
-						normals[x][z].y = ((f_normals[0][x - 1][z - 1].y + f_normals[1][x - 1][z - 1].y) / 2 + f_normals[0][x - 1][z].y + (f_normals[0][x][z].y + f_normals[1][x][z].y) / 2 + f_normals[1][x][z - 1].y) / 4;
-						normals[x][z].z = ((f_normals[0][x - 1][z - 1].z + f_normals[1][x - 1][z - 1].z) / 2 + f_normals[0][x - 1][z].z + (f_normals[0][x][z].z + f_normals[1][x][z].z) / 2 + f_normals[1][x][z - 1].z) / 4;
-						normals[x][z] = normalize(normals[x][z]);
-					}
-					else if (x == chunkLength) {////////////CHANGE//////////////
-						normals[x][z].x = f_normals[0][x - 1][z].x + f_normals[1][x - 1][z].x;
-						normals[x][z].y = f_normals[0][x - 1][z].y + f_normals[1][x - 1][z].y;
-						normals[x][z].z = f_normals[0][x - 1][z].z + f_normals[1][x - 1][z].z;
-						normals[x][z] = normalize(normals[x][z]);
-					}
-					else if (z == chunkLength) {
-						normals[x][z].x = f_normals[0][x][z - 1].x + f_normals[1][x][z - 1].x;
-						normals[x][z].y = f_normals[0][x][z - 1].y + f_normals[1][x][z - 1].y;
-						normals[x][z].z = f_normals[0][x][z - 1].z + f_normals[1][x][z - 1].z;
-						normals[x][z] = normalize(normals[x][z]);
-					}
-					else {////////////CHANGE//////////////
-						normals[x][z].x = f_normals[0][x][z].x + f_normals[1][x][z].x;
-						normals[x][z].y = f_normals[0][x][z].y + f_normals[1][x][z].y;
-						normals[x][z].z = f_normals[0][x][z].z + f_normals[1][x][z].z;
-						normals[x][z] = normalize(normals[x][z]);
-					}
 
-					verticesFinal[z * (chunkLength + 1) + x].normal = normals[x][z];
+			counter = 0;
+			for (int z = 1; z < chunkLength + 2; z++) {
+				for (int x = 1; x < chunkLength + 2; x++) {
+					normals[x - 1][z - 1].x = ((f_normals[0][x - 1][z - 1].x + f_normals[1][x - 1][z - 1].x) / 2 + f_normals[0][x - 1][z].x + (f_normals[0][x][z].x + f_normals[1][x][z].x) / 2 + f_normals[1][x][z - 1].x) / 4;
+					normals[x - 1][z - 1].y = ((f_normals[0][x - 1][z - 1].y + f_normals[1][x - 1][z - 1].y) / 2 + f_normals[0][x - 1][z].y + (f_normals[0][x][z].y + f_normals[1][x][z].y) / 2 + f_normals[1][x][z - 1].y) / 4;
+					normals[x - 1][z - 1].z = ((f_normals[0][x - 1][z - 1].z + f_normals[1][x - 1][z - 1].z) / 2 + f_normals[0][x - 1][z].z + (f_normals[0][x][z].z + f_normals[1][x][z].z) / 2 + f_normals[1][x][z - 1].z) / 4;
+					normals[x - 1][z - 1] = normalize(normals[x - 1][z - 1]);
+
+					verticesFinal[counter].normal = normals[x - 1][z - 1];
+					counter++;
 				}
 			}
-			//*/
-			/*
-			for (int z = 0; z < chunkLength + 1; z++) {
-			for (int x = 0; x < chunkLength + 1; x++) {
-			if (x != chunkLength && z != chunkLength) {
-			normals[x][z].x = f_normals[0][x][z].x + f_normals[1][x][z].x;
-			normals[x][z].y = f_normals[0][x][z].y + f_normals[1][x][z].y;
-			normals[x][z].z = f_normals[0][x][z].z + f_normals[1][x][z].z;
-			normals[x][z] = normalize(normals[x][z]);
-			}
-			else if (x == chunkLength) {////////////CHANGE//////////////
-			normals[x][z].x = f_normals[0][x-1][z].x + f_normals[1][x-1][z].x;
-			normals[x][z].y = f_normals[0][x-1][z].y + f_normals[1][x-1][z].y;
-			normals[x][z].z = f_normals[0][x-1][z].z + f_normals[1][x-1][z].z;
-			}
-			else {
-			normals[x][z].x = f_normals[0][x][z-1].x + f_normals[1][x][z-1].x;
-			normals[x][z].y = f_normals[0][x][z-1].y + f_normals[1][x][z-1].x;
-			normals[x][z].z = f_normals[0][x][z-1].z + f_normals[1][x][z-1].x;
-			}
-			verticesFinal[z * (chunkLength + 1) + x].normal = XMFLOAT3(float(normals[x][z].x), float(normals[x][z].y), float(normals[x][z].z));
-			}
-			}
-			//*/
 
 			d3d11DevCon->Map(vertBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &updatedVertexBufferData);
 			memcpy(updatedVertexBufferData.pData, verticesFinal, sizeof(verticesFinal));
@@ -696,4 +657,3 @@ public:
 }planet;
 
 #endif
-
