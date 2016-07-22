@@ -13,8 +13,12 @@ void UpdateCameraDirection()
 	XMMATRIX RotateYTempMatrix;
 	RotateYTempMatrix = XMMatrixRotationY(camYaw);
 
+	//double3 temp = normalize(camPos);
+	//XMVECTOR cameraPosition = XMVectorSet(temp.x, temp.y, temp.z, 0.0f);
+	
 	camRight = XMVector3TransformCoord(DefaultRight, RotateYTempMatrix);
 	camUp = XMVector3TransformCoord(camUp, RotateYTempMatrix);
+	//camUp = XMVector3TransformCoord(cameraPosition, RotateYTempMatrix);
 	//camForward = XMVector3TransformCoord(DefaultForward, RotateYTempMatrix);
 
 	camDir.x = XMVectorGetX(camTarget);
@@ -65,7 +69,7 @@ void DetectMouseInput()
 				if(camPitch < -1.49)
 					camPitch = -1.49;
 
-
+				/*
 				if (cursorPos.x < 50.0f)
 					SetCursorPos(50, int(cursorPos.y));
 				if (cursorPos.y < 50.0f)
@@ -74,6 +78,7 @@ void DetectMouseInput()
 					SetCursorPos(Width-50, int(cursorPos.y));
 				if (cursorPos.y > float(Height)-50.0f)
 					SetCursorPos(int(cursorPos.x), Height-50);
+					*/
 			}
 
 			mouseLastState = mouseCurrState;
@@ -139,6 +144,8 @@ void DetectKeyboardInput(double time)
 		PostMessage(hwnd, WM_DESTROY, 0, 0);
 
 	if(playingGame == true && windowActive == true){
+		SetCursorPos(Width/2, Height/2);
+
 		if(keyboardState[DIK_LCONTROL] & 0x80){
 			crouching = true;
 		}

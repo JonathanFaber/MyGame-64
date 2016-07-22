@@ -163,7 +163,7 @@ public:
 		d3d11DevCon->IASetVertexBuffers( 0, 1, &vertBuffer, &stride2, &offset2 );
 
 		//Set the WVP matrix and send it to the constant buffer in effect file
-		WVP = world * camView * camProjection;
+		WVP = world * camView * camProjection[1];
 		cbPerObj.WVP = XMMatrixTranspose(WVP);	
 		cbPerObj.World = XMMatrixTranspose(world);	
 		d3d11DevCon->UpdateSubresource( cbPerObjectBuffer, 0, NULL, &cbPerObj, 0, 0 );

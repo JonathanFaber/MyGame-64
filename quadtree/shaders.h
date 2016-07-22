@@ -28,10 +28,16 @@ ID3D11PixelShader* INSTANCE_PS;
 ID3D10Blob* INSTANCE_VS_Buffer;
 ID3D10Blob* INSTANCE_PS_Buffer;
 
+ID3D11VertexShader* MODEL_VS;
+ID3D11PixelShader* MODEL_PS;
+ID3D10Blob* MODEL_VS_Buffer;
+ID3D10Blob* MODEL_PS_Buffer;
+
 ID3D11InputLayout* vertLayout;
 ID3D11InputLayout* spriteLayout;
 ID3D11InputLayout* planetLayout;
 ID3D11InputLayout* instanceLayout;
+ID3D11InputLayout* modelLayout;
 
 void createShaders(){
 	//Compile Shaders from shader file
@@ -45,6 +51,8 @@ void createShaders(){
 	hr = D3DX11CompileFromFile(L"effects1.fx", 0, 0, "PLANET_PS", "ps_5_0", 0, 0, 0, &PLANET_PS_Buffer, 0, 0);
 	hr = D3DX11CompileFromFile(L"effects1.fx", 0, 0, "INSTANCE_VS", "vs_5_0", 0, 0, 0, &INSTANCE_VS_Buffer, 0, 0);
 	hr = D3DX11CompileFromFile(L"effects1.fx", 0, 0, "INSTANCE_PS", "ps_5_0", 0, 0, 0, &INSTANCE_PS_Buffer, 0, 0);
+	hr = D3DX11CompileFromFile(L"effects1.fx", 0, 0, "MODEL_VS", "vs_5_0", 0, 0, 0, &MODEL_VS_Buffer, 0, 0);
+	hr = D3DX11CompileFromFile(L"effects1.fx", 0, 0, "MODEL_PS", "ps_5_0", 0, 0, 0, &MODEL_PS_Buffer, 0, 0);
 
 	//Create the Shader Objects
 	hr = d3d11Device->CreateVertexShader(VS_Buffer->GetBufferPointer(), VS_Buffer->GetBufferSize(), NULL, &VS);
@@ -57,6 +65,8 @@ void createShaders(){
 	hr = d3d11Device->CreatePixelShader(PLANET_PS_Buffer->GetBufferPointer(), PLANET_PS_Buffer->GetBufferSize(), NULL, &PLANET_PS);
 	hr = d3d11Device->CreateVertexShader(INSTANCE_VS_Buffer->GetBufferPointer(), INSTANCE_VS_Buffer->GetBufferSize(), NULL, &INSTANCE_VS);
 	hr = d3d11Device->CreatePixelShader(INSTANCE_PS_Buffer->GetBufferPointer(), INSTANCE_PS_Buffer->GetBufferSize(), NULL, &INSTANCE_PS);
+	hr = d3d11Device->CreateVertexShader(MODEL_VS_Buffer->GetBufferPointer(), MODEL_VS_Buffer->GetBufferSize(), NULL, &MODEL_VS);
+	hr = d3d11Device->CreatePixelShader(MODEL_PS_Buffer->GetBufferPointer(), MODEL_PS_Buffer->GetBufferSize(), NULL, &MODEL_PS);
 }
 
 void createInputLayouts(){
@@ -68,6 +78,8 @@ void createInputLayouts(){
 		PLANET_VS_Buffer->GetBufferSize(), &planetLayout );
 	hr = d3d11Device->CreateInputLayout(instance_layout, numInstanceElements, INSTANCE_VS_Buffer->GetBufferPointer(),
 		INSTANCE_VS_Buffer->GetBufferSize(), &instanceLayout);
+	hr = d3d11Device->CreateInputLayout(modelLayoutDesc, numModelElements, MODEL_VS_Buffer->GetBufferPointer(),
+		MODEL_VS_Buffer->GetBufferSize(), &modelLayout);
 }
 
 void cleanUpLayouts(){
@@ -75,6 +87,7 @@ void cleanUpLayouts(){
 	spriteLayout->Release();
 	planetLayout->Release();
 	instanceLayout->Release();
+	modelLayout->Release();
 }
 
 void cleanUpShaders(){
@@ -102,6 +115,11 @@ void cleanUpShaders(){
 	INSTANCE_PS->Release();
 	INSTANCE_VS_Buffer->Release();
 	INSTANCE_PS_Buffer->Release();
+
+	MODEL_VS->Release();
+	MODEL_PS->Release();
+	MODEL_VS_Buffer->Release();
+	MODEL_PS_Buffer->Release();
 }
 
 #endif

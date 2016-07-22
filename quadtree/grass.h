@@ -851,12 +851,12 @@ public:
 
 		//Set the WVP matrix and send it to the constant buffer in effect file
 		//WVP = grassWorld * camView * camProjection;
-		WVP = grassWorld * camView * planetCamProjection;
+		WVP = grassWorld * camView * camProjection[0];
 		cbPerObj.WVP = XMMatrixTranspose(WVP);
 		cbPerObj.World = XMMatrixTranspose(grassWorld);
 		d3d11DevCon->UpdateSubresource(cbPerObjectBuffer, 0, NULL, &cbPerObj, 0, 0);
 		d3d11DevCon->VSSetConstantBuffers(0, 1, &cbPerObjectBuffer);
-		d3d11DevCon->PSSetShaderResources(0, 1, &texture[7]);
+		d3d11DevCon->PSSetShaderResources(0, 1, &texture[5]);
 		d3d11DevCon->PSSetSamplers(0, 1, &CubesTexSamplerState);
 
 		d3d11DevCon->RSSetState(RSCullNone);

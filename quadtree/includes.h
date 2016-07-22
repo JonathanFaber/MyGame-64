@@ -1,6 +1,7 @@
 #ifndef __INCLUDES_H_INCLUDED__
 #define __INCLUDES_H_INCLUDED__ 
 
+#define DIRECTINPUT_VERSION 0x0800
 
 //Include and link appropriate libraries and headers//
 #pragma comment(lib, "d3d11.lib")
@@ -22,6 +23,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <cmath>
+#include "FW1FontWrapper.h"
 
 
 using namespace DirectX;
@@ -80,10 +82,7 @@ XMMATRIX Rotationz;
 
 XMMATRIX WVP;
 XMMATRIX camView;
-XMMATRIX camProjection;
-XMMATRIX planetCamProjection;
-XMMATRIX planetCamProjectionSmall;
-XMMATRIX starCamProjection;
+XMMATRIX camProjection[4]; // 0 to 3 is smallest to biggest
 
 XMMATRIX spriteView;
 XMMATRIX spriteProjection;
@@ -237,6 +236,21 @@ struct Vertex	//Overloaded Vertex Structure
 	XMFLOAT3 normal;
 };
 
+struct ModelVertex	//Overloaded Vertex Structure
+{
+	ModelVertex() {}
+	ModelVertex(float x, float y, float z,
+		float u, float v,
+		float nx, float ny, float nz, float tx, float ty, float tz, float btx, float bty, float btz)
+		: pos(x, y, z), texCoord(u, v), normal(nx, ny, nz), tangent(tx, ty, tz), bitangent(btx, bty, btz) {}
+
+	XMFLOAT3 pos;
+	XMFLOAT2 texCoord;
+	XMFLOAT3 normal;
+	XMFLOAT3 tangent;
+	XMFLOAT3 bitangent;
+};
+
 struct PlanetVertex	//Overloaded Vertex Structure
 {
 	PlanetVertex(){}
@@ -263,11 +277,21 @@ struct SpriteVertex	//Overloaded Vertex Structure
 	XMFLOAT2 texCoord;
 };
 
+
 D3D11_INPUT_ELEMENT_DESC layout[] =
 {
 	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },  
 	{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },  
-	{ "NORMAL",	 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0}
+	{ "NORMAL",	 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0},
+};
+
+D3D11_INPUT_ELEMENT_DESC modelLayoutDesc[] =
+{
+	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	{ "NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 20, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	{ "TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 32, D3D11_INPUT_PER_VERTEX_DATA, 0 },
+	{ "BITANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 44, D3D11_INPUT_PER_VERTEX_DATA, 0 },
 };
 
 D3D11_INPUT_ELEMENT_DESC planetLayoutDesc[] =
@@ -296,9 +320,11 @@ D3D11_INPUT_ELEMENT_DESC instance_layout[] =
 };
 
 UINT numElements = ARRAYSIZE(layout);
+UINT numModelElements = ARRAYSIZE(modelLayoutDesc);
 UINT numPlanetElements = ARRAYSIZE(planetLayoutDesc);
 UINT numSpriteElements = ARRAYSIZE(spriteLayoutDesc);
 UINT numInstanceElements = ARRAYSIZE(instance_layout);
+
 
 
 
@@ -640,7 +666,7 @@ double y_vel_old;
 double z_vel = 0.0;
 
 double playerVelocity;
-double speed = 1000000.0;
+double speed = 100.0;
 double maxSpeed = 200.0;
 double speedTime;
 double maxspeedTime;

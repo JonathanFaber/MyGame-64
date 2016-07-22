@@ -6,6 +6,8 @@
 #include "sky.h"
 #include "timer.h"
 #include "sprites.h"
+#include "text.h"
+#include "model.h"
 
 int WINAPI WinMain(HINSTANCE hInstance,	//Main windows function
 	HINSTANCE hPrevInstance, 
@@ -248,7 +250,7 @@ void CleanUp()
 	CCWcullMode->Release();
 	CWcullMode->Release();
 
-	for (int i = 0; i < 8; i++)
+	for (int i = 0; i < 9; i++)
 		texture[i]->Release();
 
 	BackBuffer11->Release();
@@ -266,15 +268,13 @@ void CleanUp()
 	planet.cleanUp();
 	skybox.cleanUp();
 	grass.cleanUp();
+	testModel.cleanUp();
 	//sprucetree.cleanUp();
-
-	FPS.cleanUp();
-
-	menuText_resume.cleanUp();
-	menuText_quitWorld.cleanUp();
 
 	menuButton_resume.cleanUp();
 	menuButton_quitWorld.cleanUp();
+
+	cleanUpText();
 
 	//
 	cleanUpShaders();
@@ -310,12 +310,7 @@ bool InitScene()
 	planet.init();
 	//sprucetree.init(std::string("models/Pine_4m.obj"));
 	grass.create();
-
-
-	FPS.create();
-
-	menuText_resume.create();
-	menuText_quitWorld.create();
+	testModel.load("models/nanosuit/", "nanosuit.obj");
 
 	menuButton_resume.create(spriteTexCoord_Box);
 	menuButton_quitWorld.create(spriteTexCoord_Box);
@@ -389,10 +384,10 @@ bool InitScene()
 	camView = XMMatrixLookAtLH( camPosition, camTarget, camUp );
 
 	//Set the Projection matrix
-	camProjection = XMMatrixPerspectiveFovLH(0.4f*3.14f, float(Width) / float(Height), 0.1f, 1000.0f);
-	planetCamProjection = XMMatrixPerspectiveFovLH( 0.4f*3.14f, float(Width)/float(Height), 10.0f, 10000000.0f);
-	planetCamProjectionSmall = XMMatrixPerspectiveFovLH(0.4f*3.14f, float(Width) / float(Height), 10.0f, 10000000.0f);
-	starCamProjection = XMMatrixPerspectiveFovLH(0.4f*3.14f, float(Width) / float(Height), 1000000.0f, 1000000000000.0f);
+	camProjection[0] = XMMatrixPerspectiveFovLH(0.4f*3.14f, float(Width) / float(Height), 0.1f, 1000.0f);
+	camProjection[1] = XMMatrixPerspectiveFovLH(0.4f*3.14f, float(Width) / float(Height), 900.0f, 90000000.0f);
+	camProjection[2] = XMMatrixPerspectiveFovLH(0.4f*3.14f, float(Width) / float(Height), 80000000.0f, 8000000000000.0f);
+	camProjection[3] = XMMatrixPerspectiveFovLH(0.4f*3.14f, float(Width) / float(Height), 7000000000000.0f, 700000000000000000.0f);
 
 
 	//sprite information
@@ -424,23 +419,23 @@ bool InitScene()
 	blendDesc.AlphaToCoverageEnable = true;	
 	blendDesc.RenderTarget[0] = rtbd;
 
-	hr = D3DX11CreateShaderResourceViewFromFile( d3d11Device, L"textures/grass.png",
+	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"textures/grass.png",
 		NULL, NULL, &texture[0], NULL );
-	hr = D3DX11CreateShaderResourceViewFromFile( d3d11Device, L"textures/text.png",
+	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"textures/text.png",
 		NULL, NULL, &texture[1], NULL );
-	hr = D3DX11CreateShaderResourceViewFromFile( d3d11Device, L"textures/stone.png",
+	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"textures/stone.png",
 		NULL, NULL, &texture[2], NULL );
-	hr = D3DX11CreateShaderResourceViewFromFile( d3d11Device, L"textures/Water.jpg",
+	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"textures/Water.jpg",
 		NULL, NULL, &texture[3], NULL );
-	hr = D3DX11CreateShaderResourceViewFromFile( d3d11Device, L"textures/Snow.png",
+	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"textures/Snow.png",
 		NULL, NULL, &texture[4], NULL );
-	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"textures/bark.jpg",
-		NULL, NULL, &texture[5], NULL);
-	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"textures/pine_branch.dds",
-		NULL, NULL, &texture[6], NULL);
 	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"textures/grassalpha.png",
-		NULL, NULL, &texture[7], NULL);
+		NULL, NULL, &texture[5], NULL);
 	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"textures/SandTexture.png",
+		NULL, NULL, &texture[6], NULL);
+	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"textures/notexture_diff.png",
+		NULL, NULL, &texture[7], NULL);
+	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"textures/notexture_norm.png",
 		NULL, NULL, &texture[8], NULL);
 
 	//Tell D3D we will be loading a cube texture
@@ -520,6 +515,9 @@ bool InitScene()
 
 	d3d11Device->CreateDepthStencilState(&noDepthStencilDesc, &DSLessEqualNoDepth);
 	//////////////////////////////////////////////////////////////////
+
+	createText();
+
 	return true;
 }
 
@@ -540,18 +538,20 @@ void UpdateScene(double time)
 	planet.update();
 	grass.update(camPos);
 	skybox.updateSphere();
+	testModel.update();
 	//sprucetree.update();
 
 	if(timeSinceFpsCalc > 1.0f){
 		timeSinceFpsCalc = 0.0f;
 		
-		FPS.update(boost::lexical_cast<std::string>(fpsCounter), XMFLOAT2(-750.0f, 350.0f), XMFLOAT2(24.0f, 24.0f));
+		FPS.setText(fpsCounter);
 
 		fpsCounter = 0;
 	}
 	
 	if (showPause == true){
-		menuText_resume.update("Resume Game", XMFLOAT2(-180.0f, 200.0f), XMFLOAT2(40.0f, 40.0f));
+		menuText_resume.setText("Resume Game");
+		menuText_quitWorld.setText("Quit World");
 	}
 	
 
@@ -568,11 +568,6 @@ void UpdateScene(double time)
 
 	if (onResume == true && leftClick == true)
 		resume = true;
-
-	
-	if (showPause == true){
-		menuText_quitWorld.update("Quit World", XMFLOAT2(-180.0f, -200.0f), XMFLOAT2(40.0f, 40.0f));
-	}
 
 
 	if (showPause == true){
@@ -593,6 +588,9 @@ void UpdateScene(double time)
 
 void DrawScene()
 {
+	//ID3D11Asynchronous *gpuTime;
+	//d3d11DevCon->Begin(gpuTime);
+
 	//Clear our render target and depth/stencil view
 	float bgColor[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
 	d3d11DevCon->ClearRenderTargetView(renderTargetView, bgColor);	
@@ -614,12 +612,25 @@ void DrawScene()
 	d3d11DevCon->OMSetBlendState(0, 0, 0xffffffff);
 
 	d3d11DevCon->OMSetDepthStencilState(DSLessEqual, 0);
-	//
-	planet.draw();
+
+	// draw everything with camProjection[3]
+
+	// draw everything with camProjection[2]
+	// CLEAR DEPTH STENCIL
+
+	// draw everything with camProjection[1]
+	// CLEAR DEPTH STENCIL
+
+	planet.drawFar();
+
+	// draw everything with camProjection[0]
+	d3d11DevCon->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+	planet.drawClose();
 	//skybox.drawSphere();
 
 	//sprucetree.draw();
-
+	testModel.draw();
 
 	//"fine-tune" the blending equation
 	float blendFactor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -629,17 +640,20 @@ void DrawScene()
 
 	// Transparent with depth
 	grass.draw();
+	
+
+	
+
 
 	d3d11DevCon->OMSetDepthStencilState(DSLessEqualNoDepth, 0);
-
 	// Transparent no depth
 
-	FPS.draw();
+	FPS.draw(32.0f, 50.0f, 100.0f, 0xff000000);
 
 	
 	if (showPause == true) {
-		menuText_resume.draw();
-		menuText_quitWorld.draw();
+		menuText_resume.draw(32.0f, 50.0f, 200.0f, 0xff000000);
+		menuText_quitWorld.draw(32.0f, 50.0f, 920.0f, 0xff000000);
 
 		menuButton_resume.draw();
 		menuButton_quitWorld.draw();

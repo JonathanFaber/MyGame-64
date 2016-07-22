@@ -251,13 +251,6 @@ public:
 		}
 
 		void drawTerrain() {
-			//Set Vertex and Pixel Shaders
-			d3d11DevCon->VSSetShader(PLANET_VS, 0, 0);
-			d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
-
-			//Set the Input Layout
-			d3d11DevCon->IASetInputLayout(planetLayout);
-
 			UINT stride = sizeof(PlanetVertex);
 			UINT offset = 0;
 
@@ -266,14 +259,18 @@ public:
 
 			//Set the WVP matrix and send it to the constant buffer in effect file
 			//WVP = groundWorld * camView * camProjection;
-			WVP = groundWorld * camView * planetCamProjection;
+			if (distance < 900.0f)
+				WVP = groundWorld * camView * camProjection[0];
+			else
+				WVP = groundWorld * camView * camProjection[1];
+
 			cbPerObj.WVP = XMMatrixTranspose(WVP);
 			cbPerObj.World = XMMatrixTranspose(groundWorld);
 			d3d11DevCon->UpdateSubresource(cbPerObjectBuffer, 0, NULL, &cbPerObj, 0, 0);
 			d3d11DevCon->VSSetConstantBuffers(0, 1, &cbPerObjectBuffer);
 			d3d11DevCon->PSSetShaderResources(0, 1, &texture[0]);
 			d3d11DevCon->PSSetShaderResources(1, 1, &texture[2]);
-			d3d11DevCon->PSSetShaderResources(2, 1, &texture[8]);
+			d3d11DevCon->PSSetShaderResources(2, 1, &texture[6]);
 			d3d11DevCon->PSSetSamplers(0, 1, &CubesTexSamplerState);
 
 			d3d11DevCon->RSSetState(RSCullNone);
@@ -421,13 +418,26 @@ public:
 			}
 		}
 
-		void draw() {
+		void drawClose() {
 			double eyeRange = sqrt(positive(camPos.x*camPos.x + camPos.y*camPos.y + camPos.z*camPos.z - maxLength*maxLength))*1.05;
 			if (eyeRange < 8000.0)
 				eyeRange = 8000.0;
 
 			for (int i = 0; i < 2048; i++) {
-				if (quadData[i].draw == true && quadData[i].distance < eyeRange) {
+				if (quadData[i].draw == true && quadData[i].distance < eyeRange && quadData[i].distance < 900.0) {
+					if (dotProduct(quadData[i].posAway, camDir) > 0.5 || quadData[i].distance < quadData[i].length * 2.0)
+						quadData[i].drawTerrain();
+				}
+			}
+		}
+
+		void drawFar() {
+			double eyeRange = sqrt(positive(camPos.x*camPos.x + camPos.y*camPos.y + camPos.z*camPos.z - maxLength*maxLength))*1.05;
+			if (eyeRange < 8000.0)
+				eyeRange = 8000.0;
+
+			for (int i = 0; i < 2048; i++) {
+				if (quadData[i].draw == true && quadData[i].distance < eyeRange && quadData[i].distance >= 900.0) {
 					if (dotProduct(quadData[i].posAway, camDir) > 0.5 || quadData[i].distance < quadData[i].length * 2.0)
 						quadData[i].drawTerrain();
 				}
@@ -637,13 +647,36 @@ public:
 		sideZ1.update(camPos);
 	}
 
-	void draw() {
-		sideY0.draw();
-		sideY1.draw();
-		sideX0.draw();
-		sideX1.draw();
-		sideZ0.draw();
-		sideZ1.draw();
+	void drawClose() {
+		//Set Vertex and Pixel Shaders
+		d3d11DevCon->VSSetShader(PLANET_VS, 0, 0);
+		d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
+
+		//Set the Input Layout
+		d3d11DevCon->IASetInputLayout(planetLayout);
+
+		sideY0.drawClose();
+		sideY1.drawClose();
+		sideX0.drawClose();
+		sideX1.drawClose();
+		sideZ0.drawClose();
+		sideZ1.drawClose();
+	}
+
+	void drawFar() {
+		//Set Vertex and Pixel Shaders
+		d3d11DevCon->VSSetShader(PLANET_VS, 0, 0);
+		d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
+
+		//Set the Input Layout
+		d3d11DevCon->IASetInputLayout(planetLayout);
+
+		sideY0.drawFar();
+		sideY1.drawFar();
+		sideX0.drawFar();
+		sideX1.drawFar();
+		sideZ0.drawFar();
+		sideZ1.drawFar();
 	}
 
 	void cleanUp() {
