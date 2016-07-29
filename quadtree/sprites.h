@@ -126,6 +126,7 @@ public:
 		
 		//Set Vertex and Pixel Shaders
 		d3d11DevCon->VSSetShader(SPRITE_VS, 0, 0);
+		d3d11DevCon->GSSetShader(NULL, 0, 0);
 		d3d11DevCon->PSSetShader(SPRITE_PS, 0, 0);
 
 		//Set the Input Layout

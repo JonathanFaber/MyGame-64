@@ -834,6 +834,7 @@ public:
 	void draw() {
 		//Set Vertex and Pixel Shaders
 		d3d11DevCon->VSSetShader(INSTANCE_VS, 0, 0);
+		d3d11DevCon->GSSetShader(NULL, 0, 0);
 		d3d11DevCon->PSSetShader(INSTANCE_PS, 0, 0);
 
 		UINT strides[2] = { sizeof(Vertex), sizeof(InstanceData) };

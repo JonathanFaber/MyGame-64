@@ -19,8 +19,10 @@ ID3D10Blob* SPRITE_VS_Buffer;
 ID3D10Blob* SPRITE_PS_Buffer;
 
 ID3D11VertexShader* PLANET_VS;
+ID3D11GeometryShader* PLANET_GS;
 ID3D11PixelShader* PLANET_PS;
 ID3D10Blob* PLANET_VS_Buffer;
+ID3D10Blob* PLANET_GS_Buffer;
 ID3D10Blob* PLANET_PS_Buffer;
 
 ID3D11VertexShader* INSTANCE_VS;
@@ -41,18 +43,19 @@ ID3D11InputLayout* modelLayout;
 
 void createShaders(){
 	//Compile Shaders from shader file
-	hr = D3DX11CompileFromFile(L"effects1.fx", 0, 0, "VS", "vs_5_0", 0, 0, 0, &VS_Buffer, 0, 0);		//Used to be vs_4_0 and ps_4_0
-	hr = D3DX11CompileFromFile(L"effects1.fx", 0, 0, "PS", "ps_5_0", 0, 0, 0, &PS_Buffer, 0, 0);
+	hr = D3DX11CompileFromFile(L"default.hlsl", 0, 0, "VS", "vs_5_0", 0, 0, 0, &VS_Buffer, 0, 0);		//Used to be vs_4_0 and ps_4_0
+	hr = D3DX11CompileFromFile(L"default.hlsl", 0, 0, "PS", "ps_5_0", 0, 0, 0, &PS_Buffer, 0, 0);
 	hr = D3DX11CompileFromFile(L"effects1.fx", 0, 0, "SKYMAP_VS", "vs_5_0", 0, 0, 0, &SKYMAP_VS_Buffer, 0, 0);
 	hr = D3DX11CompileFromFile(L"effects1.fx", 0, 0, "SKYMAP_PS", "ps_5_0", 0, 0, 0, &SKYMAP_PS_Buffer, 0, 0);
 	hr = D3DX11CompileFromFile(L"effects1.fx", 0, 0, "SPRITE_VS", "vs_5_0", 0, 0, 0, &SPRITE_VS_Buffer, 0, 0);
 	hr = D3DX11CompileFromFile(L"effects1.fx", 0, 0, "SPRITE_PS", "ps_5_0", 0, 0, 0, &SPRITE_PS_Buffer, 0, 0);
-	hr = D3DX11CompileFromFile(L"effects1.fx", 0, 0, "PLANET_VS", "vs_5_0", 0, 0, 0, &PLANET_VS_Buffer, 0, 0);
-	hr = D3DX11CompileFromFile(L"effects1.fx", 0, 0, "PLANET_PS", "ps_5_0", 0, 0, 0, &PLANET_PS_Buffer, 0, 0);
-	hr = D3DX11CompileFromFile(L"effects1.fx", 0, 0, "INSTANCE_VS", "vs_5_0", 0, 0, 0, &INSTANCE_VS_Buffer, 0, 0);
-	hr = D3DX11CompileFromFile(L"effects1.fx", 0, 0, "INSTANCE_PS", "ps_5_0", 0, 0, 0, &INSTANCE_PS_Buffer, 0, 0);
-	hr = D3DX11CompileFromFile(L"effects1.fx", 0, 0, "MODEL_VS", "vs_5_0", 0, 0, 0, &MODEL_VS_Buffer, 0, 0);
-	hr = D3DX11CompileFromFile(L"effects1.fx", 0, 0, "MODEL_PS", "ps_5_0", 0, 0, 0, &MODEL_PS_Buffer, 0, 0);
+	hr = D3DX11CompileFromFile(L"planet.hlsl", 0, 0, "VS", "vs_5_0", 0, 0, 0, &PLANET_VS_Buffer, 0, 0);
+	hr = D3DX11CompileFromFile(L"planet.hlsl", 0, 0, "GS", "gs_5_0", 0, 0, 0, &PLANET_GS_Buffer, 0, 0);
+	hr = D3DX11CompileFromFile(L"planet.hlsl", 0, 0, "PS", "ps_5_0", 0, 0, 0, &PLANET_PS_Buffer, 0, 0);
+	hr = D3DX11CompileFromFile(L"grass.hlsl", 0, 0, "VS", "vs_5_0", 0, 0, 0, &INSTANCE_VS_Buffer, 0, 0);
+	hr = D3DX11CompileFromFile(L"grass.hlsl", 0, 0, "PS", "ps_5_0", 0, 0, 0, &INSTANCE_PS_Buffer, 0, 0);
+	hr = D3DX11CompileFromFile(L"model.hlsl", 0, 0, "VS", "vs_5_0", 0, 0, 0, &MODEL_VS_Buffer, 0, 0);
+	hr = D3DX11CompileFromFile(L"model.hlsl", 0, 0, "PS", "ps_5_0", 0, 0, 0, &MODEL_PS_Buffer, 0, 0);
 
 	//Create the Shader Objects
 	hr = d3d11Device->CreateVertexShader(VS_Buffer->GetBufferPointer(), VS_Buffer->GetBufferSize(), NULL, &VS);
@@ -62,6 +65,7 @@ void createShaders(){
 	hr = d3d11Device->CreateVertexShader(SPRITE_VS_Buffer->GetBufferPointer(), SPRITE_VS_Buffer->GetBufferSize(), NULL, &SPRITE_VS);
 	hr = d3d11Device->CreatePixelShader(SPRITE_PS_Buffer->GetBufferPointer(), SPRITE_PS_Buffer->GetBufferSize(), NULL, &SPRITE_PS);	
 	hr = d3d11Device->CreateVertexShader(PLANET_VS_Buffer->GetBufferPointer(), PLANET_VS_Buffer->GetBufferSize(), NULL, &PLANET_VS);
+	hr = d3d11Device->CreateGeometryShader(PLANET_GS_Buffer->GetBufferPointer(), PLANET_GS_Buffer->GetBufferSize(), NULL, &PLANET_GS);
 	hr = d3d11Device->CreatePixelShader(PLANET_PS_Buffer->GetBufferPointer(), PLANET_PS_Buffer->GetBufferSize(), NULL, &PLANET_PS);
 	hr = d3d11Device->CreateVertexShader(INSTANCE_VS_Buffer->GetBufferPointer(), INSTANCE_VS_Buffer->GetBufferSize(), NULL, &INSTANCE_VS);
 	hr = d3d11Device->CreatePixelShader(INSTANCE_PS_Buffer->GetBufferPointer(), INSTANCE_PS_Buffer->GetBufferSize(), NULL, &INSTANCE_PS);
@@ -107,8 +111,10 @@ void cleanUpShaders(){
 	SPRITE_PS_Buffer->Release();
 
 	PLANET_VS->Release();
+	PLANET_GS->Release();
 	PLANET_PS->Release();
 	PLANET_VS_Buffer->Release();
+	PLANET_GS_Buffer->Release();
 	PLANET_PS_Buffer->Release();
 
 	INSTANCE_VS->Release();

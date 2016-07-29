@@ -267,7 +267,7 @@ void CleanUp()
     
 	planet.cleanUp();
 	skybox.cleanUp();
-	grass.cleanUp();
+	//grass.cleanUp();
 	testModel.cleanUp();
 	//sprucetree.cleanUp();
 
@@ -309,7 +309,7 @@ bool InitScene()
 	////////////////////////
 	planet.init();
 	//sprucetree.init(std::string("models/Pine_4m.obj"));
-	grass.create();
+	//grass.create();
 	testModel.load("models/nanosuit/", "nanosuit.obj");
 
 	menuButton_resume.create(spriteTexCoord_Box);
@@ -419,7 +419,7 @@ bool InitScene()
 	blendDesc.AlphaToCoverageEnable = true;	
 	blendDesc.RenderTarget[0] = rtbd;
 
-	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"textures/grass.png",
+	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"textures/grass1.jpg",
 		NULL, NULL, &texture[0], NULL );
 	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"textures/text.png",
 		NULL, NULL, &texture[1], NULL );
@@ -536,7 +536,7 @@ void UpdateScene(double time)
 	fpsCounter++;
 
 	planet.update();
-	grass.update(camPos);
+	//grass.update(camPos);
 	skybox.updateSphere();
 	testModel.update();
 	//sprucetree.update();
@@ -639,7 +639,7 @@ void DrawScene()
 	d3d11DevCon->OMSetBlendState(Transparency, blendFactor, 0xffffffff);
 
 	// Transparent with depth
-	grass.draw();
+	//grass.draw();
 	
 
 	

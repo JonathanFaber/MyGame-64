@@ -425,8 +425,13 @@ public:
 
 			for (int i = 0; i < 2048; i++) {
 				if (quadData[i].draw == true && quadData[i].distance < eyeRange && quadData[i].distance < 900.0) {
-					if (dotProduct(quadData[i].posAway, camDir) > 0.5 || quadData[i].distance < quadData[i].length * 2.0)
+					if (dotProduct(quadData[i].posAway, camDir) > 0.5 || quadData[i].distance < quadData[i].length * 2.0) {
+						if (quadData[i].length == minLength)
+							d3d11DevCon->GSSetShader(PLANET_GS, 0, 0);
+						else
+							d3d11DevCon->GSSetShader(NULL, 0, 0);
 						quadData[i].drawTerrain();
+					}
 				}
 			}
 		}
@@ -650,6 +655,7 @@ public:
 	void drawClose() {
 		//Set Vertex and Pixel Shaders
 		d3d11DevCon->VSSetShader(PLANET_VS, 0, 0);
+		//set gs in drawClose
 		d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
 
 		//Set the Input Layout
@@ -666,6 +672,7 @@ public:
 	void drawFar() {
 		//Set Vertex and Pixel Shaders
 		d3d11DevCon->VSSetShader(PLANET_VS, 0, 0);
+		d3d11DevCon->GSSetShader(NULL, 0, 0);
 		d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
 
 		//Set the Input Layout
