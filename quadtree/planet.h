@@ -43,6 +43,7 @@ public:
 		ID3D11Buffer* indexBuffer;
 		ID3D11Buffer* vertBuffer;
 		XMMATRIX groundWorld;
+		XMFLOAT3 translation;
 
 		PlanetVertex verticesInitial[(chunkLength + 1)*(chunkLength + 1)];
 		DWORD indices[chunkLength*chunkLength * 6];
@@ -90,20 +91,20 @@ public:
 			}
 
 			counter = 0;
-
+			// in this order for gs shader
 			for (int x = 0; x < chunkLength; x++) {
 				for (int z = 0; z < chunkLength; z++) {
-					indices[counter] = x + z * (chunkLength + 1);
+					indices[counter] = x + z * (chunkLength + 1); // 0
 					counter++;
-					indices[counter] = x + 1 + z * (chunkLength + 1);
+					indices[counter] = x + 1 + z * (chunkLength + 1); // 1
 					counter++;
-					indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1);
+					indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1); // 2
 					counter++;
-					indices[counter] = x + z * (chunkLength + 1);
+					indices[counter] = x + z * (chunkLength + 1); // 0
 					counter++;
-					indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1);
+					indices[counter] = x + (chunkLength + 1) + z * (chunkLength + 1); // 3
 					counter++;
-					indices[counter] = x + (chunkLength + 1) + z * (chunkLength + 1);
+					indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1); // 2
 					counter++;
 				}
 			}
@@ -137,6 +138,7 @@ public:
 			groundWorld = XMMatrixIdentity();
 			Scale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
 			Translation = XMMatrixTranslation(float(firstCamPos.x - camPos.x), float(firstCamPos.y - camPos.y), float(firstCamPos.z - camPos.z));
+			translation = XMFLOAT3(float(firstCamPos.x - camPos.x), float(firstCamPos.y - camPos.y), float(firstCamPos.z - camPos.z));
 			//Translation = XMMatrixTranslation(0.0f, -5.0f, 0.0f);
 			groundWorld = Scale * Translation;
 		}
@@ -264,16 +266,30 @@ public:
 			else
 				WVP = groundWorld * camView * camProjection[1];
 
-			cbPerObj.WVP = XMMatrixTranspose(WVP);
-			cbPerObj.World = XMMatrixTranspose(groundWorld);
-			d3d11DevCon->UpdateSubresource(cbPerObjectBuffer, 0, NULL, &cbPerObj, 0, 0);
-			d3d11DevCon->VSSetConstantBuffers(0, 1, &cbPerObjectBuffer);
+			//cbPerPlanetObj.WVP = XMMatrixTranspose(WVP);
+			//cbPerPlanetObj.World = XMMatrixTranspose(groundWorld);
+			cbPerPlanetObj.Translation = translation;
+			cbPerPlanetObj.View = XMMatrixTranspose(camView);
+
+			if (distance < 900.0f)
+				cbPerPlanetObj.Proj = XMMatrixTranspose(camProjection[0]);
+			else
+				cbPerPlanetObj.Proj = XMMatrixTranspose(camProjection[1]);
+			
+			d3d11DevCon->UpdateSubresource(cbPerPlanetBuffer, 0, NULL, &cbPerPlanetObj, 0, 0);
+			d3d11DevCon->VSSetConstantBuffers(0, 1, &cbPerPlanetBuffer);
+			d3d11DevCon->GSSetConstantBuffers(0, 1, &cbPerPlanetBuffer);
 			d3d11DevCon->PSSetShaderResources(0, 1, &texture[0]);
 			d3d11DevCon->PSSetShaderResources(1, 1, &texture[2]);
 			d3d11DevCon->PSSetShaderResources(2, 1, &texture[6]);
+			d3d11DevCon->PSSetShaderResources(3, 1, &texture[5]);
 			d3d11DevCon->PSSetSamplers(0, 1, &CubesTexSamplerState);
 
 			d3d11DevCon->RSSetState(RSCullNone);
+			//if (posSquare.y == maxLength || posSquare.x == maxLength || posSquare.z == -maxLength)
+			//	d3d11DevCon->RSSetState(CCWcullMode);
+			//else
+			//	d3d11DevCon->RSSetState(CWcullMode);
 			//d3d11DevCon->RSSetState(Wireframe);
 			d3d11DevCon->DrawIndexed(chunkLength*chunkLength * 6, 0, 0);
 		}

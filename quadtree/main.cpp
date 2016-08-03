@@ -257,7 +257,7 @@ void CleanUp()
 
 	cbPerFrameBufferVS->Release();
 	cbPerFrameBufferPS->Release();
-	//cbPerPlanetBuffer->Release();
+	cbPerPlanetBuffer->Release();
 
 	CubesTexSamplerState->Release();
 
@@ -353,6 +353,17 @@ bool InitScene()
 
 	hr = d3d11Device->CreateBuffer(&cbbd, NULL, &cbPerObjectBuffer);
 
+	//Create the buffer to send to the cbuffer in effect file
+	ZeroMemory(&cbbd, sizeof(D3D11_BUFFER_DESC));
+
+	cbbd.Usage = D3D11_USAGE_DEFAULT;
+	cbbd.ByteWidth = sizeof(cbPerPlanet);
+	cbbd.BindFlags = D3D11_BIND_CONSTANT_BUFFER;
+	cbbd.CPUAccessFlags = 0;
+	cbbd.MiscFlags = 0;
+
+	hr = d3d11Device->CreateBuffer(&cbbd, NULL, &cbPerPlanetBuffer);
+
 	//Create the buffer to send to the cbuffer per frame in effect file
 	ZeroMemory(&cbbd, sizeof(D3D11_BUFFER_DESC));
 
@@ -401,13 +412,14 @@ bool InitScene()
 	//Set the sprite Projection matrix
 	spriteProjection = XMMatrixOrthographicLH(Width, Height, 0.01f, 1.0f);
 
+	/*
 	D3D11_BLEND_DESC blendDesc;
 	ZeroMemory( &blendDesc, sizeof(blendDesc) );
 
 	D3D11_RENDER_TARGET_BLEND_DESC rtbd;
 	ZeroMemory( &rtbd, sizeof(rtbd) );
 
-	rtbd.BlendEnable			 = true;
+	rtbd.BlendEnable			 = false;
 	rtbd.SrcBlend				 = D3D11_BLEND_SRC_COLOR;
 	rtbd.DestBlend				 = D3D11_BLEND_INV_SRC_ALPHA;
 	rtbd.BlendOp				 = D3D11_BLEND_OP_ADD;
@@ -418,6 +430,29 @@ bool InitScene()
 
 	blendDesc.AlphaToCoverageEnable = true;	
 	blendDesc.RenderTarget[0] = rtbd;
+
+	d3d11Device->CreateBlendState(&blendDesc, &Transparency);
+	//*/
+
+	D3D11_BLEND_DESC blendDesc;
+	ZeroMemory(&blendDesc, sizeof(blendDesc));
+
+	D3D11_RENDER_TARGET_BLEND_DESC rtbd;
+	ZeroMemory(&rtbd, sizeof(rtbd));
+
+	rtbd.BlendEnable = false;
+	rtbd.SrcBlend = D3D11_BLEND_SRC_COLOR;
+	rtbd.DestBlend = D3D11_BLEND_BLEND_FACTOR;
+	rtbd.BlendOp = D3D11_BLEND_OP_ADD;
+	rtbd.SrcBlendAlpha = D3D11_BLEND_ONE;
+	rtbd.DestBlendAlpha = D3D11_BLEND_ZERO;
+	rtbd.BlendOpAlpha = D3D11_BLEND_OP_ADD;
+	rtbd.RenderTargetWriteMask = D3D11_COLOR_WRITE_ENABLE_ALL;
+
+	blendDesc.AlphaToCoverageEnable = true;
+	blendDesc.RenderTarget[0] = rtbd;
+
+	d3d11Device->CreateBlendState(&blendDesc, &Transparency);
 
 	hr = D3DX11CreateShaderResourceViewFromFile(d3d11Device, L"textures/grass1.jpg",
 		NULL, NULL, &texture[0], NULL );
@@ -475,8 +510,6 @@ bool InitScene()
 
 	//Create the Sample State
 	hr = d3d11Device->CreateSamplerState( &sampDesc, &CubesTexSamplerState );
-
-	d3d11Device->CreateBlendState(&blendDesc, &Transparency);
 
 	D3D11_RASTERIZER_DESC cmdesc;
 
@@ -599,6 +632,7 @@ void DrawScene()
 	constbuffPerFrameVS.timeElaps = float(timeElaps);
 	d3d11DevCon->UpdateSubresource(cbPerFrameBufferVS, 0, NULL, &constbuffPerFrameVS, 0, 0);
 	d3d11DevCon->VSSetConstantBuffers(1, 1, &cbPerFrameBufferVS);
+	d3d11DevCon->GSSetConstantBuffers(1, 1, &cbPerFrameBufferVS);
 
 	constbuffPerFramePS.light = light;
 	//constbuffPerFrame.timeElaps = 1.0f;
@@ -626,7 +660,6 @@ void DrawScene()
 	// draw everything with camProjection[0]
 	d3d11DevCon->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
-	planet.drawClose();
 	//skybox.drawSphere();
 
 	//sprucetree.draw();
@@ -637,6 +670,8 @@ void DrawScene()
 
 	//Set the blend state for transparent objects
 	d3d11DevCon->OMSetBlendState(Transparency, blendFactor, 0xffffffff);
+
+	planet.drawClose();
 
 	// Transparent with depth
 	//grass.draw();

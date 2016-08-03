@@ -37,13 +37,16 @@ ID3D11RenderTargetView* renderTargetView;
 ID3D11DepthStencilView* depthStencilView;
 ID3D11Texture2D* depthStencilBuffer;
 ID3D11BlendState* Transparency;
+
 ID3D11RasterizerState* CCWcullMode;
 ID3D11RasterizerState* CWcullMode;
 ID3D11RasterizerState* Wireframe;
+
 ID3D11ShaderResourceView* texture[16];
 ID3D11SamplerState* CubesTexSamplerState;
 
 ID3D11Buffer* cbPerObjectBuffer;
+ID3D11Buffer* cbPerPlanetBuffer;
 ID3D11Buffer* cbPerFrameBufferVS;
 ID3D11Buffer* cbPerFrameBufferPS;
 ID3D11Buffer* cbInstancePosBuffer;
@@ -172,17 +175,18 @@ struct cbPerObject
 };
 
 cbPerObject cbPerObj;
-/*
+
 struct cbPerPlanet
 {
-	XMMATRIX  WVP1;
-	XMMATRIX World1;
-
-	UINT excludeIndices[12];
+	// need different names if this and cbPerObject are in the same shader
+	//XMMATRIX  WVP;
+	//XMMATRIX World;
+	XMFLOAT3 Translation;
+	XMMATRIX View;
+	XMMATRIX Proj;
 };
 
-cbPerPlanet cbPer_Planet;
-*/
+cbPerPlanet cbPerPlanetObj;
 
 struct cbPerFrameVS
 {

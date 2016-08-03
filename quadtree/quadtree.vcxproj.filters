@@ -70,9 +70,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <FxCompile Include="Effects1.fx">
-      <Filter>Source Files</Filter>
-    </FxCompile>
     <FxCompile Include="model.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
@@ -85,5 +82,16 @@
     <FxCompile Include="planet.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="Effects1.fx">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="noise3d.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
+    <None Include="noise4d.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
