@@ -22,7 +22,7 @@
     <ProjectGuid>{3AFF83D7-B926-4974-A463-0B125D2A47A7}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>quadtree</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.10240.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.10586.0</WindowsTargetPlatformVersion>
     <ProjectName>MyGame 64</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -81,8 +81,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Users\Jonathan\Desktop\MyGame 64-master\assimp-3.3.1\include\assimp;C:\Users\Jonathan\Desktop\MyGame 64-master\FW1FontWrapper_1_1;C:\Users\Jonathan\Desktop\MyGame 64\boost_1_57_0;D:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\Jonathan\Desktop\MyGame 64-master\FW1FontWrapper_1_1\x64;C:\Users\Jonathan\Desktop\MyGame 64\boost_1_57_0\libs;D:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Lib\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\Jonathan Faber\Desktop\My Game 64\boost_1_61_0;C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;C:\Users\Jonathan\Desktop\MyGame 64-master\assimp-3.3.1\include\assimp;C:\Users\Jonathan Faber\Desktop\My Game 64\assimp-3.3.1\include\assimp;D:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\Jonathan Faber\Desktop\My Game 64\boost_1_61_0\libs;C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Lib\x64;D:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -140,14 +140,14 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\Users\Jonathan\Desktop\MyGame 64-master\assimp-3.3.1\include\assimp;C:\Users\Jonathan\Desktop\MyGame 64-master\FW1FontWrapper_1_1;D:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;C:\Users\Jonathan\Desktop\MyGame 64\boost_1_57_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Jonathan\Desktop\MyGame 64-master\assimp-3.3.1\include\assimp;C:\Users\Jonathan Faber\Desktop\My Game 64\assimp-3.3.1\include\assimp;C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;D:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;C:\Users\Jonathan Faber\Desktop\My Game 64\boost_1_61_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Users\Jonathan\Desktop\MyGame 64-master\FW1FontWrapper_1_1\x64;C:\Users\Jonathan\Desktop\MyGame 64\boost_1_57_0\libs;D:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Lib\x64;C:\Users\Jonathan\Desktop\MyGame 64-master\FW1FontWrapper_1_1\x64;C:\Users\Jonathan Faber\Desktop\My Game 64\boost_1_61_0\libs;D:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>d3d11.lib;d3dx11d.lib;D3DCompiler.lib;dxerr.lib;dxgi.lib;dxguid.lib;FW1FontWrapper.lib;assimp-vc140-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <FxCompile>
@@ -162,8 +162,10 @@
     <ClInclude Include="model.h" />
     <ClInclude Include="noiseFunctions.h" />
     <ClInclude Include="planet.h" />
+    <ClInclude Include="quad.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="shaders.h" />
+    <ClInclude Include="side.h" />
     <ClInclude Include="simplexnoise.h" />
     <ClInclude Include="sky.h" />
     <ClInclude Include="sprites.h" />

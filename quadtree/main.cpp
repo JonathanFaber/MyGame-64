@@ -147,7 +147,7 @@ bool InitializeDirect3d11App(HINSTANCE hInstance)
 
 	swapChainDesc.BufferDesc = bufferDesc;
 	swapChainDesc.SampleDesc.Count = 8;
-	swapChainDesc.SampleDesc.Quality = 8;
+	swapChainDesc.SampleDesc.Quality = 0;	// integrated graphics does not support more than 0
 	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 	swapChainDesc.BufferCount = 1;
 	swapChainDesc.OutputWindow = hwnd; 
@@ -186,7 +186,7 @@ bool InitializeDirect3d11App(HINSTANCE hInstance)
 	depthStencilDesc.ArraySize = 1;
 	depthStencilDesc.Format    = DXGI_FORMAT_D24_UNORM_S8_UINT;
 	depthStencilDesc.SampleDesc.Count   = 8;
-	depthStencilDesc.SampleDesc.Quality = 8;
+	depthStencilDesc.SampleDesc.Quality = 0;
 	depthStencilDesc.Usage          = D3D11_USAGE_DEFAULT;
 	depthStencilDesc.BindFlags      = D3D11_BIND_DEPTH_STENCIL;
 	depthStencilDesc.CPUAccessFlags = 0; 
