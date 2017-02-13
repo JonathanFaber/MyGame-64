@@ -71,7 +71,13 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="simplexnoise.cpp">
+    <ClCompile Include="simplexnoise2D.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="simplexnoise3D.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="simplexnoise4D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

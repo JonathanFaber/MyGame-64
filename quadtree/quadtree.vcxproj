@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -22,20 +22,20 @@
     <ProjectGuid>{3AFF83D7-B926-4974-A463-0B125D2A47A7}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>quadtree</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.10586.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>
     <ProjectName>MyGame 64</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -48,7 +48,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -81,8 +81,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Users\Jonathan Faber\Desktop\My Game 64\boost_1_61_0;C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;C:\Users\Jonathan\Desktop\MyGame 64-master\assimp-3.3.1\include\assimp;C:\Users\Jonathan Faber\Desktop\My Game 64\assimp-3.3.1\include\assimp;D:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\Jonathan Faber\Desktop\My Game 64\boost_1_61_0\libs;C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Lib\x64;D:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Lib\x64;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\Jonathan\Desktop\MyGame 64-master\boost_1_61_0;C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;C:\Users\Jonathan\Desktop\MyGame 64-master\assimp-3.3.1\include\assimp;C:\Users\Jonathan Faber\Desktop\My Game 64\assimp-3.3.1\include\assimp;D:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\Jonathan\Desktop\MyGame 64-master\boost_1_61_0\libs;C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Lib\x64;D:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -140,15 +140,20 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>C:\Users\Jonathan\Desktop\MyGame 64-master\assimp-3.3.1\include\assimp;C:\Users\Jonathan Faber\Desktop\My Game 64\assimp-3.3.1\include\assimp;C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;D:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;C:\Users\Jonathan Faber\Desktop\My Game 64\boost_1_61_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Jonathan\Desktop\MyGame 64-master\assimp-3.3.1\include\assimp;C:\Users\Jonathan Faber\Desktop\My Game 64\assimp-3.3.1\include\assimp;C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;D:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Include;C:\Users\Jonathan\Desktop\MyGame 64-master\boost_1_61_0;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Lib\x64;C:\Users\Jonathan\Desktop\MyGame 64-master\FW1FontWrapper_1_1\x64;C:\Users\Jonathan Faber\Desktop\My Game 64\boost_1_61_0\libs;D:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>C:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Lib\x64;C:\Users\Jonathan\Desktop\MyGame 64-master\FW1FontWrapper_1_1\x64;C:\Users\Jonathan\Desktop\MyGame 64-master\boost_1_61_0\libs;D:\Program Files %28x86%29\Microsoft DirectX SDK %28June 2010%29\Lib\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>d3d11.lib;d3dx11d.lib;D3DCompiler.lib;dxerr.lib;dxgi.lib;dxguid.lib;FW1FontWrapper.lib;assimp-vc140-mt.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <HeapReserveSize>4294967296</HeapReserveSize>
+      <StackReserveSize>
+      </StackReserveSize>
+      <HeapCommitSize>
+      </HeapCommitSize>
     </Link>
     <FxCompile>
       <ShaderModel>5.0</ShaderModel>
@@ -175,7 +180,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="simplexnoise.cpp" />
+    <ClCompile Include="simplexnoise2D.cpp" />
+    <ClCompile Include="simplexnoise3D.cpp" />
+    <ClCompile Include="simplexnoise4D.cpp" />
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="Effects1.fx" />
