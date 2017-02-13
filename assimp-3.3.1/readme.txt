@@ -1,1 +1,0 @@
-Put assimp-3.3.1 files in here
