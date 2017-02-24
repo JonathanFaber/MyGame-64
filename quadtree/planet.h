@@ -5,18 +5,16 @@
 
 class Planet {
 public:
-	SideY sideY0, sideY1;
-	SideX sideX0, sideX1;
-	SideZ sideZ0, sideZ1;
+	Side sideY0, sideY1, sideX0, sideX1, sideZ0, sideZ1;
 
 public:
 	void init() {
-		sideY0.create(-maxLength);
-		sideY1.create(maxLength);
-		sideX0.create(-maxLength);
-		sideX1.create(maxLength);
-		sideZ0.create(-maxLength);
-		sideZ1.create(maxLength);
+		sideY0.create('y', -maxLength);
+		sideY1.create('y', maxLength);
+		sideX0.create('x', -maxLength);
+		sideX1.create('x', maxLength);
+		sideZ0.create('z', -maxLength);
+		sideZ1.create('z', maxLength);
 	}
 
 	void update() {
@@ -35,7 +33,7 @@ public:
 		d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
 
 		//Set the Input Layout
-		d3d11DevCon->IASetInputLayout(planetLayout);
+		d3d11DevCon->IASetInputLayout(planetLayout);2DNIM-R973W-JIV0B
 
 		sideY0.drawClose();
 		sideY1.drawClose();
