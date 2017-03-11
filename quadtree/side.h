@@ -8,28 +8,44 @@
 #include "quadtree.h"
 
 class Side {
-    Quad quad;
+    Quad *quad;
 
+public:
     Side(char side, double squarePosSide) {
         if (side == 'y')
-            quad = Quad(double3(0.0, squarePosSide, 0.0), double3(0.0, squarePosSide, 0.0), maxLength, side, squarePosSide);
+            quad = new Quad(double3(0.0, squarePosSide, 0.0), double3(0.0, squarePosSide, 0.0), maxLength, side, squarePosSide);
         else if (side == 'x')
-            quad = Quad(double3(squarePosSide, 0.0, 0.0), double3(squarePosSide, 0.0, 0.0), maxLength, side, squarePosSide);
+            quad = new Quad(double3(squarePosSide, 0.0, 0.0), double3(squarePosSide, 0.0, 0.0), maxLength, side, squarePosSide);
         else
-            quad = Quad(double3(0.0, 0.0, squarePosSide), double3(0.0, 0.0, squarePosSide), maxLength, side, squarePosSide);
+            quad = new Quad(double3(0.0, 0.0, squarePosSide), double3(0.0, 0.0, squarePosSide), maxLength, side, squarePosSide);
     }
 
-    void update() {
-        quad.update();
-        quad.transform(camPos);
+    void update(double3 camPos) {
+		int quadsAdded = 0;
+
+        quad->update();
+        quad->transform();
+
+		quad->addQuads(&quadsAdded, true);
+		quad->addQuads(&quadsAdded, false);
+		quad->update();
+
+		for (int l = minLength; l < maxLength; l *= 2.0) {
+			quad->removeQuads(l);
+			quad->update();
+		}
     }
 
     void drawClose() {
-        quad.drawTerrain(true);
+        quad->drawTerrain(true);
     }
 
     void drawFar() {
-        quad.drawTerrain(false);
+        quad->drawTerrain(false);
+    }
+
+	~Side() {
+		delete quad;
     }
 };
 
