@@ -2,7 +2,6 @@
 #include "shaders.h"
 #include "camera.h"
 #include "planet.h"
-//#include "grass.h"
 #include "sky.h"
 #include "timer.h"
 #include "sprites.h"
