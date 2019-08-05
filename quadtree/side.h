@@ -6,13 +6,14 @@
 #define MYGAME_64_SIDE_H
 
 #include "quadtree.h"
+#include "shaders.h"
 
 class Side {
     Quad *quad;
 
 public:
     Side() {
-        quad = new Quad(double3(0.0, maxLength, 0.0), double3(0.0, maxLength, 0.0), maxLength);
+        quad = new Quad(double3(0.0, maxLength, 0.0), maxLength);
     }
 
     void update(double3 camPos) {
@@ -32,15 +33,35 @@ public:
     }
 
     void drawClose() {
+		//Set Vertex and Pixel Shaders
+		d3d11DevCon->VSSetShader(PLANET_VS, 0, 0);
+		//set gs in drawClose
+		d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
+
+		//Set the Input Layout
+		d3d11DevCon->IASetInputLayout(planetLayout);
+
         quad->drawTerrain(true);
     }
 
     void drawFar() {
+		//Set Vertex and Pixel Shaders
+		d3d11DevCon->VSSetShader(PLANET_VS, 0, 0);
+		d3d11DevCon->GSSetShader(NULL, 0, 0);
+		d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
+
+		//Set the Input Layout
+		d3d11DevCon->IASetInputLayout(planetLayout);
+
         quad->drawTerrain(false);
     }
 
-	~Side() {
+	void cleanUp() {
 		delete quad;
+	}
+
+	~Side() {
+		cleanUp();
     }
 };
 

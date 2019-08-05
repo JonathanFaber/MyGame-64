@@ -39,9 +39,6 @@
     <ClInclude Include="simplexnoise.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="planet.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="noiseFunctions.h">
       <Filter>Header Files</Filter>
     </ClInclude>

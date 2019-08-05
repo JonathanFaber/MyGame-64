@@ -10,55 +10,51 @@
 
 class Quad {
 public:
-    double3 pos;
-    double3 posSquare;
-    double3 posAway;
-    double distance;
-    double length;
-    bool subdivide;
-    bool combine;
-    bool draw;
-    Quad *child[4];
-
     Quad() {}
-    Quad(double3 pos, double3 posSquare, double length);
+    Quad(double3 pos, double length);
     ~Quad();
 
-    PlanetVertex verticesFinal[(chunkLength + 1)*(chunkLength + 1)];
     XMFLOAT3 positions[chunkLength + 3][chunkLength + 3];
     double3 firstCamPos;
-    bool terrainCalculated;
-    bool firstUpdate;
 
-    void create();
     void update();
     void transform();
-    void setChunkData();
     void drawTerrain(bool drawClose);
-    void makeChildren();
 	void addQuads(int *added, bool onlyVisible);
 	void removeQuads(int len);
 
-
 private:
+	double3 pos;
+	double3 posAway;
+	double distance;
+	double length;
+	bool subdivide;
+	bool combine;
+	bool draw;
+	Quad *child[4];
+
     ID3D11Buffer* indexBuffer;
     ID3D11Buffer* vertBuffer;
     XMMATRIX groundWorld;
     XMFLOAT3 translation;
 
-    PlanetVertex verticesInitial[(chunkLength + 1)*(chunkLength + 1)];
+    PlanetVertex vertices[(chunkLength + 1)*(chunkLength + 1)];
     DWORD indices[chunkLength*chunkLength * 6];
+	int nIndices = chunkLength * chunkLength * 6;
 
     D3D11_BUFFER_DESC indexBufferDesc;
     D3D11_SUBRESOURCE_DATA indexBufferData;
     D3D11_BUFFER_DESC vertexBufferDesc;
     D3D11_SUBRESOURCE_DATA initialVertexBufferData;
-    D3D11_MAPPED_SUBRESOURCE updatedVertexBufferData;
+
+	void create();
+	void setVertexData();
+	void setIndexData();
+	void makeChildren();
 };
 
-inline Quad::Quad(double3 pos, double3 posSquare, double length) {
+inline Quad::Quad(double3 pos, double length) {
     this->pos = pos;
-    this->posSquare = posSquare;
     this->length = length;
     create();
 }
@@ -71,57 +67,126 @@ inline void Quad::create() {
     subdivide = false;
     combine = false;
 
-    counter = 0;
-    for (int z = 0; z < chunkLength + 1; z++) {
-        for (int x = 0; x < chunkLength + 1; x++) {
-            verticesInitial[counter++] = PlanetVertex(float(x - chunkLength / 2) / 16.0f, 0.0f, float(z - chunkLength / 2) / 16.0f, float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f);
-        }
-    }
+	setVertexData();
+	setIndexData();
+}
 
-    counter = 0;
-    // in this order for gs shader
-    for (int x = 0; x < chunkLength; x++) {
-        for (int z = 0; z < chunkLength; z++) {
-            indices[counter] = x + z * (chunkLength + 1); // 0
-            counter++;
-            indices[counter] = x + 1 + z * (chunkLength + 1); // 1
-            counter++;
-            indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1); // 2
-            counter++;
-            indices[counter] = x + z * (chunkLength + 1); // 0
-            counter++;
-            indices[counter] = x + (chunkLength + 1) + z * (chunkLength + 1); // 3
-            counter++;
-            indices[counter] = x + (chunkLength + 2) + z * (chunkLength + 1); // 2
-            counter++;
-        }
-    }
+inline void Quad::setVertexData() {
+	counter = 0;
+	for (int z = 0; z < (chunkLength + 3); z++) {
+		for (int x = 0; x < (chunkLength + 3); x++) {
+			double3 temp = double3((x - 1 - chunkLength / 2) / 16.0 * length, 0.0, (z - 1 - chunkLength / 2) / 16.0 * length);
 
-    ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
+			temp = temp + pos;
 
-    indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-    indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-    indexBufferDesc.CPUAccessFlags = 0;
-    indexBufferDesc.MiscFlags = 0;
-    indexBufferDesc.ByteWidth = sizeof(indices);
+			double3 tempNormal = normalize(temp);
+			terrainPoint.generateTerrainPoint(tempNormal);
 
-    indexBufferData.pSysMem = indices;
-    d3d11Device->CreateBuffer(&indexBufferDesc, &indexBufferData, &indexBuffer);
+			// temp = temp + terrainPoint.terrain;
+			temp = temp - firstCamPos;
 
-    ZeroMemory(&initialVertexBufferData, sizeof(initialVertexBufferData));
-    ZeroMemory(&vertexBufferDesc, sizeof(vertexBufferDesc));
-    ZeroMemory(&updatedVertexBufferData, sizeof(D3D11_MAPPED_SUBRESOURCE));
+			positions[x][z] = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
 
-    vertexBufferDesc.Usage = D3D11_USAGE_DYNAMIC;
-    vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    vertexBufferDesc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
-    vertexBufferDesc.MiscFlags = 0;
-    vertexBufferDesc.ByteWidth = sizeof(verticesInitial);
+			if (x != 0 && z != 0 && x != chunkLength + 2 && z != chunkLength + 2) {
+				vertices[counter].pos = positions[x][z];
+				vertices[counter].texCoord = XMFLOAT2(float(((x - chunkLength / 2) / 16.0) * length), float(((z - chunkLength / 2) / 16.0) * length));
 
-    initialVertexBufferData.pSysMem = verticesInitial;
-    hr = d3d11Device->CreateBuffer(&vertexBufferDesc, &initialVertexBufferData, &vertBuffer);
+				vertices[counter].height = terrainPoint.height_f;
+				vertices[counter++].landTypeHeight = terrainPoint.landTypeHeight_f;
+			}
+		}
+	}
 
-    setChunkData();
+	XMFLOAT3 V;
+	XMFLOAT3 W;
+	XMFLOAT3 f_normals[2][chunkLength + 2][chunkLength + 2];
+	XMFLOAT3 normals[chunkLength + 1][chunkLength + 1];
+
+	counter = 0;
+	for (int z = 0; z < chunkLength + 2; z++) {
+		for (int x = 0; x < chunkLength + 2; x++) {
+			for (int i = 0; i < 2; i++) {
+				if (i == 0) {
+					V.x = positions[x + 1][z + 1].x - positions[x][z].x;
+					V.y = positions[x + 1][z + 1].y - positions[x][z].y;
+					V.z = positions[x + 1][z + 1].z - positions[x][z].z;
+					W.x = positions[x + 1][z].x - positions[x][z].x;
+					W.y = positions[x + 1][z].y - positions[x][z].y;
+					W.z = positions[x + 1][z].z - positions[x][z].z;
+				}
+				if (i == 1) {
+					V.x = positions[x + 1][z + 1].x - positions[x][z].x;
+					V.y = positions[x + 1][z + 1].y - positions[x][z].y;
+					V.z = positions[x + 1][z + 1].z - positions[x][z].z;
+					W.x = positions[x][z + 1].x - positions[x][z].x;
+					W.y = positions[x][z + 1].y - positions[x][z].y;
+					W.z = positions[x][z + 1].z - positions[x][z].z;
+				}
+				f_normals[i][x][z] = crossProduct(V, W);
+				f_normals[i][x][z] = normalize(f_normals[i][x][z]);
+
+				// if (dotProduct(f_normals[i][x][z], XMFLOAT3(pos.x, pos.y, pos.z)) < 0.0f) {
+				if (f_normals[i][x][z].y < 0.0f) {
+					f_normals[i][x][z].x *= -1;
+					f_normals[i][x][z].y *= -1;
+					f_normals[i][x][z].z *= -1;
+				}
+			}
+		}
+	}
+
+	counter = 0;
+	for (int z = 1; z < chunkLength + 2; z++) {
+		for (int x = 1; x < chunkLength + 2; x++) {
+			normals[x - 1][z - 1].x = ((f_normals[0][x - 1][z - 1].x + f_normals[1][x - 1][z - 1].x) / 2 + f_normals[0][x - 1][z].x + (f_normals[0][x][z].x + f_normals[1][x][z].x) / 2 + f_normals[1][x][z - 1].x) / 4;
+			normals[x - 1][z - 1].y = ((f_normals[0][x - 1][z - 1].y + f_normals[1][x - 1][z - 1].y) / 2 + f_normals[0][x - 1][z].y + (f_normals[0][x][z].y + f_normals[1][x][z].y) / 2 + f_normals[1][x][z - 1].y) / 4;
+			normals[x - 1][z - 1].z = ((f_normals[0][x - 1][z - 1].z + f_normals[1][x - 1][z - 1].z) / 2 + f_normals[0][x - 1][z].z + (f_normals[0][x][z].z + f_normals[1][x][z].z) / 2 + f_normals[1][x][z - 1].z) / 4;
+			normals[x - 1][z - 1] = normalize(normals[x - 1][z - 1]);
+
+			vertices[counter++].normal = normals[x - 1][z - 1];
+		}
+	}
+
+	ZeroMemory(&initialVertexBufferData, sizeof(initialVertexBufferData));
+	ZeroMemory(&vertexBufferDesc, sizeof(vertexBufferDesc));
+
+	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	vertexBufferDesc.ByteWidth = sizeof(vertices);
+	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
+	vertexBufferDesc.CPUAccessFlags = 0;
+	vertexBufferDesc.MiscFlags = 0;
+
+	initialVertexBufferData.pSysMem = vertices;
+	hr = d3d11Device->CreateBuffer(&vertexBufferDesc, &initialVertexBufferData, &vertBuffer);
+}
+
+inline void Quad::setIndexData() {
+	counter = 0;
+	// might need to do order 012032 for gs shader
+	for (int x = 0; x < chunkLength; x++) {
+		for (int z = 0; z < chunkLength; z++) {
+			if (true) {
+				indices[counter++] = x + z * (chunkLength + 1); // 0
+				indices[counter++] = x + 1 + z * (chunkLength + 1); // 1
+				indices[counter++] = x + (chunkLength + 2) + z * (chunkLength + 1); // 2
+				indices[counter++] = x + z * (chunkLength + 1); // 0
+				indices[counter++] = x + (chunkLength + 2) + z * (chunkLength + 1); // 2
+				indices[counter++] = x + (chunkLength + 1) + z * (chunkLength + 1); // 3
+			}
+		}
+	}
+	nIndices = counter;
+
+	ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
+
+	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
+	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
+	indexBufferDesc.CPUAccessFlags = 0;
+	indexBufferDesc.MiscFlags = 0;
+	indexBufferDesc.ByteWidth = sizeof(DWORD) * nIndices;
+
+	indexBufferData.pSysMem = indices;
+	d3d11Device->CreateBuffer(&indexBufferDesc, &indexBufferData, &indexBuffer);
 }
 
 inline void Quad::update() {
@@ -197,91 +262,6 @@ inline void Quad::transform() {
 	}
 }
 
-inline void Quad::setChunkData() {
-    counter = 0;
-    for (int z = 0; z < (chunkLength + 3); z++) {
-        for (int x = 0; x < (chunkLength + 3); x++) {
-            double3 temp = double3((x - 1 - chunkLength / 2) / 16.0 * length, 0.0, (z - 1 - chunkLength / 2) / 16.0 * length);
-
-            temp = temp + posSquare;
-
-            double3 tempNormal = normalize(temp);
-            terrainPoint.generateTerrainPoint(tempNormal);
-
-            temp = temp + terrainPoint.terrain;
-            temp = temp - firstCamPos;
-
-            positions[x][z] = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
-
-            if (x != 0 && z != 0 && x != chunkLength + 2 && z != chunkLength + 2) {
-                verticesFinal[counter].pos = positions[x][z];
-                verticesFinal[counter].texCoord = XMFLOAT2(float(double(verticesInitial[counter].pos.x) * length), float(double(verticesInitial[counter].pos.z) * length));
-
-                verticesFinal[counter].height = terrainPoint.height_f;
-                verticesFinal[counter].landTypeHeight = terrainPoint.landTypeHeight_f;
-                counter++;
-            }
-        }
-    }
-
-    XMFLOAT3 V;
-    XMFLOAT3 W;
-    XMFLOAT3 f_normals[2][chunkLength + 2][chunkLength + 2];
-    XMFLOAT3 normals[chunkLength + 1][chunkLength + 1];
-
-    counter = 0;
-    for (int z = 0; z < chunkLength + 2; z++) {
-        for (int x = 0; x < chunkLength + 2; x++) {
-            for (int i = 0; i < 2; i++) {
-                if (i == 0) {
-                    V.x = positions[x + 1][z + 1].x - positions[x][z].x;
-                    V.y = positions[x + 1][z + 1].y - positions[x][z].y;
-                    V.z = positions[x + 1][z + 1].z - positions[x][z].z;
-                    W.x = positions[x + 1][z].x - positions[x][z].x;
-                    W.y = positions[x + 1][z].y - positions[x][z].y;
-                    W.z = positions[x + 1][z].z - positions[x][z].z;
-                }
-                if (i == 1) {
-                    V.x = positions[x + 1][z + 1].x - positions[x][z].x;
-                    V.y = positions[x + 1][z + 1].y - positions[x][z].y;
-                    V.z = positions[x + 1][z + 1].z - positions[x][z].z;
-                    W.x = positions[x][z + 1].x - positions[x][z].x;
-                    W.y = positions[x][z + 1].y - positions[x][z].y;
-                    W.z = positions[x][z + 1].z - positions[x][z].z;
-                }
-                f_normals[i][x][z] = crossProduct(V, W);
-                f_normals[i][x][z] = normalize(f_normals[i][x][z]);
-
-                // if (dotProduct(f_normals[i][x][z], XMFLOAT3(pos.x, pos.y, pos.z)) < 0.0f) {
-				if (f_normals[i][x][z].y  < 0.0f) {
-                    f_normals[i][x][z].x *= -1;
-                    f_normals[i][x][z].y *= -1;
-                    f_normals[i][x][z].z *= -1;
-                }
-            }
-        }
-    }
-
-    counter = 0;
-    for (int z = 1; z < chunkLength + 2; z++) {
-        for (int x = 1; x < chunkLength + 2; x++) {
-            normals[x - 1][z - 1].x = ((f_normals[0][x - 1][z - 1].x + f_normals[1][x - 1][z - 1].x) / 2 + f_normals[0][x - 1][z].x + (f_normals[0][x][z].x + f_normals[1][x][z].x) / 2 + f_normals[1][x][z - 1].x) / 4;
-            normals[x - 1][z - 1].y = ((f_normals[0][x - 1][z - 1].y + f_normals[1][x - 1][z - 1].y) / 2 + f_normals[0][x - 1][z].y + (f_normals[0][x][z].y + f_normals[1][x][z].y) / 2 + f_normals[1][x][z - 1].y) / 4;
-            normals[x - 1][z - 1].z = ((f_normals[0][x - 1][z - 1].z + f_normals[1][x - 1][z - 1].z) / 2 + f_normals[0][x - 1][z].z + (f_normals[0][x][z].z + f_normals[1][x][z].z) / 2 + f_normals[1][x][z - 1].z) / 4;
-            normals[x - 1][z - 1] = normalize(normals[x - 1][z - 1]);
-
-            verticesFinal[counter].normal = normals[x - 1][z - 1];
-            counter++;
-        }
-    }
-
-    d3d11DevCon->Map(vertBuffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &updatedVertexBufferData);
-    memcpy(updatedVertexBufferData.pData, verticesFinal, sizeof(verticesFinal));
-    d3d11DevCon->Unmap(vertBuffer, 0);
-
-    terrainCalculated = true;
-}
-
 inline void Quad::drawTerrain(bool drawClose) {
     if (draw) {
         if (dotProduct(posAway, camDir) > 0.5 || distance < length * 2.0) {
@@ -325,13 +305,12 @@ inline void Quad::drawTerrain(bool drawClose) {
                 d3d11DevCon->PSSetShaderResources(3, 1, &texture[5]);
                 d3d11DevCon->PSSetSamplers(0, 1, &CubesTexSamplerState);
 
-                d3d11DevCon->RSSetState(RSCullNone);
-                //if (posSquare.y == maxLength || posSquare.x == maxLength || posSquare.z == -maxLength)
-                //	d3d11DevCon->RSSetState(CCWcullMode);
-                //else
-                //	d3d11DevCon->RSSetState(CWcullMode);
-                //d3d11DevCon->RSSetState(Wireframe);
-                d3d11DevCon->DrawIndexed(chunkLength * chunkLength * 6, 0, 0);
+				if (distance < 900.0f)
+					d3d11DevCon->RSSetState(RSCullNone); // For grass
+				else
+					d3d11DevCon->RSSetState(CCWcullMode);
+                // d3d11DevCon->RSSetState(Wireframe);
+                d3d11DevCon->DrawIndexed(nIndices, 0, 0);
             }
         }
     } else {
@@ -347,28 +326,27 @@ inline void Quad::makeChildren() {
         child[i] = new Quad();
 
         if (i == 0) {
-            child[i]->posSquare = double3(posSquare.x - 0.5*length, maxLength, posSquare.z - 0.5*length);
+            child[i]->pos = double3(pos.x - 0.5*length, maxLength, pos.z - 0.5*length);
         } else if (i == 1) {
-            child[i]->posSquare = double3(posSquare.x + 0.5*length, maxLength, posSquare.z - 0.5*length);
+            child[i]->pos = double3(pos.x + 0.5*length, maxLength, pos.z - 0.5*length);
         } else if (i == 2) {
-            child[i]->posSquare = double3(posSquare.x + 0.5*length, maxLength, posSquare.z + 0.5*length);
+            child[i]->pos = double3(pos.x + 0.5*length, maxLength, pos.z + 0.5*length);
         } else if (i == 3) {
-            child[i]->posSquare = double3(posSquare.x - 0.5*length, maxLength, posSquare.z + 0.5*length);
+            child[i]->pos = double3(pos.x - 0.5*length, maxLength, pos.z + 0.5*length);
         }    
         
         child[i]->length = length / 2.0;
         child[i]->firstCamPos = camPos;
 
         // Next apply height
-		double3 tempNormal = normalize(child[i]->posSquare);
+		double3 tempNormal = normalize(child[i]->pos);
         terrainPoint.generateTerrainPoint(tempNormal);
 
-        child[i]->pos = child[i]->posSquare + terrainPoint.terrain;
+        child[i]->pos = child[i]->pos;
 
         child[i]->subdivide = false;
         child[i]->combine = false;
         child[i]->draw = true;
-        child[i]->firstUpdate = true;
 
         child[i]->create();
     }

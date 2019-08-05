@@ -1,5 +1,4 @@
 #include "includes.h"
-#include "planet.h"
 
 #ifndef __CAMERA_H_INCLUDED__
 #define __CAMERA_H_INCLUDED__ 
@@ -263,7 +262,7 @@ void DetectKeyboardInput(double time)
 		}
 		*/
 
-		double3 terrainPos = normalize(camPos);
+		/*double3 terrainPos = normalize(camPos);
 		terrainPos.x *= maxLength;
 		terrainPos.y *= maxLength;
 		terrainPos.z *= maxLength;
@@ -281,7 +280,10 @@ void DetectKeyboardInput(double time)
 			camPos.x += temp.x * camHeight;
 			camPos.y += temp.y * camHeight;
 			camPos.z += temp.z * camHeight;
-		}
+		}*/
+
+		if (camPos.y < maxLength + camHeight)
+			camPos.y = maxLength + camHeight;
 
 		playerVelocity = vLength(double3(camPos.x - lastCamPos.x, camPos.y - lastCamPos.y, camPos.z - lastCamPos.z))/time;
 
