@@ -11,13 +11,8 @@ class Side {
     Quad *quad;
 
 public:
-    Side(char side, double squarePosSide) {
-        if (side == 'y')
-            quad = new Quad(double3(0.0, squarePosSide, 0.0), double3(0.0, squarePosSide, 0.0), maxLength, side, squarePosSide);
-        else if (side == 'x')
-            quad = new Quad(double3(squarePosSide, 0.0, 0.0), double3(squarePosSide, 0.0, 0.0), maxLength, side, squarePosSide);
-        else
-            quad = new Quad(double3(0.0, 0.0, squarePosSide), double3(0.0, 0.0, squarePosSide), maxLength, side, squarePosSide);
+    Side() {
+        quad = new Quad(double3(0.0, maxLength, 0.0), double3(0.0, maxLength, 0.0), maxLength);
     }
 
     void update(double3 camPos) {

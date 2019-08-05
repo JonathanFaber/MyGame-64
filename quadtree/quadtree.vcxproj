@@ -166,6 +166,7 @@
     <ClInclude Include="model.h" />
     <ClInclude Include="noiseFunctions.h" />
     <ClInclude Include="planet.h" />
+    <ClInclude Include="quadtree.h" />
     <ClInclude Include="shaders.h" />
     <ClInclude Include="side.h" />
     <ClInclude Include="simplexnoise.h" />

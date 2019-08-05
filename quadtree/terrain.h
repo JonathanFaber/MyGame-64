@@ -25,7 +25,7 @@ public:
 	double3 terrain;
 	double noise[28];
 
-	// change because it sucks
+	// needs improvement
 	void generateTerrainPoint(double3 pos) {
 		tempNormal = pos;
 

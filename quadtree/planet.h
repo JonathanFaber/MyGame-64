@@ -4,21 +4,19 @@
 #include "side.h"
 
 class Planet {
+private:
+	const int nSides = 1;
+
 public:
-	Side *side[6];
+	Side *side[1];
 
 public:
 	Planet() {
-		side[0] = new Side('y', -maxLength);
-		side[1] = new Side('y', maxLength);
-		side[2] = new Side('x', -maxLength);
-		side[3] = new Side('x', maxLength);
-		side[4] = new Side('z', -maxLength);
-		side[5] = new Side('z', maxLength);
+		side[0] = new Side();
 	}
 
 	void update(double3 camPos) {
-		for (int i = 0; i < 6; i++)
+		for (int i = 0; i < nSides; i++)
 			side[i]->update(camPos);
 	}
 
@@ -31,7 +29,7 @@ public:
 		//Set the Input Layout
 		d3d11DevCon->IASetInputLayout(planetLayout);
 
-		for (int i = 0; i < 6; i++)
+		for (int i = 0; i < nSides; i++)
 			side[i]->drawClose();
 	}
 
@@ -44,12 +42,12 @@ public:
 		//Set the Input Layout
 		d3d11DevCon->IASetInputLayout(planetLayout);
 
-		for (int i = 0; i < 6; i++)
+		for (int i = 0; i < nSides; i++)
 			side[i]->drawFar();
 	}
 
 	void cleanUp() {
-		for (int i = 0; i < 6; i++)
+		for (int i = 0; i < nSides; i++)
 			delete side[i];
 	}
 };

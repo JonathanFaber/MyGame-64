@@ -18,12 +18,10 @@ public:
     bool subdivide;
     bool combine;
     bool draw;
-    char side;
-    double squarePosSide;
     Quad *child[4];
 
     Quad() {}
-    Quad(double3 pos, double3 posSquare, double length, char side, double squarePosSide);
+    Quad(double3 pos, double3 posSquare, double length);
     ~Quad();
 
     PlanetVertex verticesFinal[(chunkLength + 1)*(chunkLength + 1)];
@@ -58,13 +56,10 @@ private:
     D3D11_MAPPED_SUBRESOURCE updatedVertexBufferData;
 };
 
-inline Quad::Quad(double3 pos, double3 posSquare, double length, char side, double squarePosSide) {
+inline Quad::Quad(double3 pos, double3 posSquare, double length) {
     this->pos = pos;
     this->posSquare = posSquare;
     this->length = length;
-    this->side = side;
-    this->squarePosSide = squarePosSide;
-
     create();
 }
 
@@ -76,29 +71,10 @@ inline void Quad::create() {
     subdivide = false;
     combine = false;
 
-    if (side == 'y') {
-        counter = 0;
-        for (int z = 0; z < chunkLength + 1; z++) {
-            for (int x = 0; x < chunkLength + 1; x++) {
-                verticesInitial[counter] = PlanetVertex(float(x - chunkLength / 2) / 16.0f, 0.0f, float(z - chunkLength / 2) / 16.0f, float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f);
-                counter++;
-            }
-        }
-    } else if (side == 'x') {
-        counter = 0;
-        for (int z = 0; z < chunkLength + 1; z++) {
-            for (int x = 0; x < chunkLength + 1; x++) {
-                verticesInitial[counter] = PlanetVertex(0.0f, float(z - chunkLength / 2) / 16.0f, float(x - chunkLength / 2) / 16.0f, float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f);
-                counter++;
-            }
-        }
-    } else {
-        counter = 0;
-        for (int z = 0; z < chunkLength + 1; z++) {
-            for (int x = 0; x < chunkLength + 1; x++) {
-                verticesInitial[counter] = PlanetVertex(float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 0.0f, float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f);
-                counter++;
-            }
+    counter = 0;
+    for (int z = 0; z < chunkLength + 1; z++) {
+        for (int x = 0; x < chunkLength + 1; x++) {
+            verticesInitial[counter++] = PlanetVertex(float(x - chunkLength / 2) / 16.0f, 0.0f, float(z - chunkLength / 2) / 16.0f, float(x - chunkLength / 2) / 16.0f, float(z - chunkLength / 2) / 16.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f);
         }
     }
 
@@ -225,23 +201,11 @@ inline void Quad::setChunkData() {
     counter = 0;
     for (int z = 0; z < (chunkLength + 3); z++) {
         for (int x = 0; x < (chunkLength + 3); x++) {
-            double3 temp = posSquare;
-
-            if (side == 'y')
-                temp = double3((x - 1 - chunkLength / 2) / 16.0 * length, 0.0, (z - 1 - chunkLength / 2) / 16.0 * length);
-            else if (side == 'x')
-                temp = double3(0.0, (z - 1 - chunkLength / 2) / 16.0 * length, (x - 1 - chunkLength / 2) / 16.0 * length);
-            else
-                temp = double3((x - 1 - chunkLength / 2) / 16.0 * length, (z - 1 - chunkLength / 2) / 16.0 * length, 0.0);
+            double3 temp = double3((x - 1 - chunkLength / 2) / 16.0 * length, 0.0, (z - 1 - chunkLength / 2) / 16.0 * length);
 
             temp = temp + posSquare;
-            temp = temp / maxLength;
-            temp = spherize(temp);
 
-            double3 tempNormal = temp;
-
-            temp = temp * maxLength;
-
+            double3 tempNormal = normalize(temp);
             terrainPoint.generateTerrainPoint(tempNormal);
 
             temp = temp + terrainPoint.terrain;
@@ -251,12 +215,7 @@ inline void Quad::setChunkData() {
 
             if (x != 0 && z != 0 && x != chunkLength + 2 && z != chunkLength + 2) {
                 verticesFinal[counter].pos = positions[x][z];
-                if (side == 'y')
-                    verticesFinal[counter].texCoord = XMFLOAT2(float(double(verticesInitial[counter].pos.x) * length), float(double(verticesInitial[counter].pos.z) * length));
-                else if (side == 'x')
-                    verticesFinal[counter].texCoord = XMFLOAT2(float(double(verticesInitial[counter].pos.z) * length), float(double(verticesInitial[counter].pos.y) * length));
-                else
-                    verticesFinal[counter].texCoord = XMFLOAT2(float(double(verticesInitial[counter].pos.x) * length), float(double(verticesInitial[counter].pos.y) * length));
+                verticesFinal[counter].texCoord = XMFLOAT2(float(double(verticesInitial[counter].pos.x) * length), float(double(verticesInitial[counter].pos.z) * length));
 
                 verticesFinal[counter].height = terrainPoint.height_f;
                 verticesFinal[counter].landTypeHeight = terrainPoint.landTypeHeight_f;
@@ -293,12 +252,12 @@ inline void Quad::setChunkData() {
                 f_normals[i][x][z] = crossProduct(V, W);
                 f_normals[i][x][z] = normalize(f_normals[i][x][z]);
 
-                if (dotProduct(f_normals[i][x][z], XMFLOAT3(pos.x, pos.y, pos.z)) < 0.0f) {
+                // if (dotProduct(f_normals[i][x][z], XMFLOAT3(pos.x, pos.y, pos.z)) < 0.0f) {
+				if (f_normals[i][x][z].y  < 0.0f) {
                     f_normals[i][x][z].x *= -1;
                     f_normals[i][x][z].y *= -1;
                     f_normals[i][x][z].z *= -1;
                 }
-
             }
         }
     }
@@ -324,11 +283,7 @@ inline void Quad::setChunkData() {
 }
 
 inline void Quad::drawTerrain(bool drawClose) {
-    double eyeRange = sqrt(positive(camPos.x*camPos.x + camPos.y*camPos.y + camPos.z*camPos.z - maxLength*maxLength))*1.05;
-    if (eyeRange < 8000.0)
-        eyeRange = 8000.0;
-
-    if (draw && distance < eyeRange) {
+    if (draw) {
         if (dotProduct(posAway, camDir) > 0.5 || distance < length * 2.0) {
             if (distance < 900 && drawClose || distance >= 900 && !drawClose) {
                 if (drawClose) {
@@ -392,49 +347,23 @@ inline void Quad::makeChildren() {
         child[i] = new Quad();
 
         if (i == 0) {
-            if (side == 'x')
-                child[i]->posSquare = double3(squarePosSide, posSquare.y - 0.5*length, posSquare.z - 0.5*length);
-            else if (side == 'y')
-                child[i]->posSquare = double3(posSquare.x - 0.5*length, squarePosSide, posSquare.z - 0.5*length);
-            else
-                child[i]->posSquare = double3(posSquare.x - 0.5*length, posSquare.y - 0.5*length, squarePosSide);
+            child[i]->posSquare = double3(posSquare.x - 0.5*length, maxLength, posSquare.z - 0.5*length);
         } else if (i == 1) {
-            if (side == 'x')
-                child[i]->posSquare = double3(squarePosSide, posSquare.y + 0.5*length, posSquare.z - 0.5*length);
-            else if (side == 'y')    
-                child[i]->posSquare = double3(posSquare.x + 0.5*length, squarePosSide, posSquare.z - 0.5*length);
-            else
-                child[i]->posSquare = double3(posSquare.x + 0.5*length, posSquare.y - 0.5*length, squarePosSide);
+            child[i]->posSquare = double3(posSquare.x + 0.5*length, maxLength, posSquare.z - 0.5*length);
         } else if (i == 2) {
-            if (side == 'x')
-                child[i]->posSquare = double3(squarePosSide, posSquare.y + 0.5*length, posSquare.z + 0.5*length);
-            else if (side == 'y')
-                child[i]->posSquare = double3(posSquare.x + 0.5*length, squarePosSide, posSquare.z + 0.5*length);
-            else
-                child[i]->posSquare = double3(posSquare.x + 0.5*length, posSquare.y + 0.5*length, squarePosSide);
+            child[i]->posSquare = double3(posSquare.x + 0.5*length, maxLength, posSquare.z + 0.5*length);
         } else if (i == 3) {
-            if (side == 'x')
-                child[i]->posSquare = double3(squarePosSide, posSquare.y - 0.5*length, posSquare.z + 0.5*length);
-            else if (side == 'y')
-                child[i]->posSquare = double3(posSquare.x - 0.5*length, squarePosSide, posSquare.z + 0.5*length);
-            else
-                child[i]->posSquare = double3(posSquare.x - 0.5*length, posSquare.y + 0.5*length, squarePosSide);
+            child[i]->posSquare = double3(posSquare.x - 0.5*length, maxLength, posSquare.z + 0.5*length);
         }    
         
-        child[i]->pos = spherize(child[i]->posSquare / maxLength);
         child[i]->length = length / 2.0;
-        child[i]->side = side;
-        child[i]->squarePosSide = squarePosSide;
         child[i]->firstCamPos = camPos;
 
         // Next apply height
-        double3 tempNormal = child[i]->pos;
-
-        child[i]->pos = child[i]->pos * maxLength;
-
+		double3 tempNormal = normalize(child[i]->posSquare);
         terrainPoint.generateTerrainPoint(tempNormal);
 
-        child[i]->pos = child[i]->pos + terrainPoint.terrain;
+        child[i]->pos = child[i]->posSquare + terrainPoint.terrain;
 
         child[i]->subdivide = false;
         child[i]->combine = false;
