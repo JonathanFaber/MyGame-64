@@ -137,9 +137,9 @@ int permutation[256];
 
 int counter = 0;
 
-const int chunkLength = 32;
+const int chunkLength = 8;
 const double maxLength = 4194304.0;
-const double minLength = 16.0;
+const double minLength = 4194304.0 / 16;
 
 //Function Prototypes//
 bool InitializeDirect3d11App(HINSTANCE hInstance);

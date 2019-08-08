@@ -282,14 +282,7 @@ void DetectKeyboardInput(double time)
 			camPos.z += temp.z * camHeight;
 		}*/
 
-		if (camPos.y < maxLength + camHeight)
-			camPos.y = maxLength + camHeight;
-
 		playerVelocity = vLength(double3(camPos.x - lastCamPos.x, camPos.y - lastCamPos.y, camPos.z - lastCamPos.z))/time;
-
-		///////////////////
-		//camPos.y = 50.0f;//
-		///////////////////
 
 		UpdateCameraPosition();
 

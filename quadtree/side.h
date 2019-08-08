@@ -13,7 +13,7 @@ class Side {
 
 public:
     Side() {
-        quad = new Quad(double3(0.0, maxLength, 0.0), maxLength);
+        quad = new Quad(double3(0.0, 0.0, 0.0), maxLength);
     }
 
     void update(double3 camPos) {
