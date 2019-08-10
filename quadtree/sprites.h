@@ -123,14 +123,7 @@ public:
 	}
 
 	void draw(){
-		
-		//Set Vertex and Pixel Shaders
-		d3d11DevCon->VSSetShader(SPRITE_VS, 0, 0);
-		d3d11DevCon->GSSetShader(NULL, 0, 0);
-		d3d11DevCon->PSSetShader(SPRITE_PS, 0, 0);
-
-		//Set the Input Layout
-		d3d11DevCon->IASetInputLayout( spriteLayout );
+		spriteShader.setShader();
 
 		//Set the grounds index buffer
 		d3d11DevCon->IASetIndexBuffer( indexBuffer, DXGI_FORMAT_R32_UINT, 0);

@@ -242,8 +242,6 @@ void CleanUp()
 	d3d11DevCon->Release();
 	renderTargetView->Release();
 	
-	cleanUpLayouts();
-
 	depthStencilView->Release();
 	depthStencilBuffer->Release();
 	cbPerObjectBuffer->Release();
@@ -318,12 +316,6 @@ bool InitScene()
 
 
 	////////////////////////
-
-	//Create the Input Layout
-	createInputLayouts();
-
-	//Set the Input Layout
-	d3d11DevCon->IASetInputLayout( vertLayout );
 
 	//Set Primitive Topology
 	d3d11DevCon->IASetPrimitiveTopology( D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST );
@@ -648,18 +640,14 @@ void DrawScene()
 
 	d3d11DevCon->OMSetDepthStencilState(DSLessEqual, 0);
 
-	// draw everything with camProjection[3]
-
-	// draw everything with camProjection[2]
-	// CLEAR DEPTH STENCIL
-
 	// draw everything with camProjection[1]
 	// CLEAR DEPTH STENCIL
 
 	side->drawFar();
 
-	// draw everything with camProjection[0]
 	d3d11DevCon->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
+
+	// draw everything with camProjection[0]
 
 	//skybox.drawSphere();
 
@@ -676,10 +664,6 @@ void DrawScene()
 
 	// Transparent with depth
 	//grass.draw();
-	
-
-	
-
 
 	d3d11DevCon->OMSetDepthStencilState(DSLessEqualNoDepth, 0);
 	// Transparent no depth
@@ -773,28 +757,7 @@ LRESULT CALLBACK WndProc(HWND hwnd,
 	WPARAM wParam,
 	LPARAM lParam)
 {
-	switch( msg )
-	{
-	//case WM_KEYDOWN:
-		//if( wParam == VK_ESCAPE ){////////////////////////////////////////////////////////////////////////////////////////////////////////
-		//if (quit == true)
-		//	DestroyWindow(hwnd);
-		//}
-		//return 0;
-	//case WM_SHOWWINDOW:
-		//break;
-		/*
-	case WM_ACTIVATE:
-		if (windowActive == true){
-			windowActive = false;
-			return WA_INACTIVE;
-		}
-		else{
-			windowActive = true;
-			return WA_CLICKACTIVE;
-		}
-		*/
-
+	switch( msg ) {
 	case WM_DESTROY:
 		DestroyWindow(hwnd);
 		PostQuitMessage(0);

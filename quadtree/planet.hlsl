@@ -239,31 +239,8 @@ float4 PS(VS_OUTPUT input) : SV_TARGET
 	float4 diffuse;
 
 
-	//diffuse = ObjTexture[0].Sample( ObjSamplerState, input.TexCoord );
+	diffuse = ObjTexture[0].Sample( ObjSamplerState, input.TexCoord );
 	//diffuse = float4(0.0f, 1.0f, 0.0f, 1.0f);
-
-	if (input.height == 64.0f) {						// grass from geometry shader
-		if (input.TexCoord.y > 0.5f)
-			discard;
-
-		clamp(input.TexCoord.y, 0.05f, 0.5f);
-		diffuse = ObjTexture[3].Sample(ObjSamplerState, input.TexCoord);
-		diffuse.r += input.landTypeHeight;
-	}
-	else {
-		if (input.height <= 0.0f)						// water
-			diffuse = float4(0.0f, 0.0f, 1.0f, 1.0f);
-		else if (input.height <= 0.0001f)				// sand
-			diffuse = ObjTexture[2].Sample(ObjSamplerState, input.TexCoord);
-		else if (input.landTypeHeight > 0.5f)			// mountains
-			diffuse = ObjTexture[1].Sample(ObjSamplerState, input.TexCoord);
-		else if (input.landTypeHeight > 0.0f)			// plains
-			diffuse = ObjTexture[0].Sample(ObjSamplerState, input.TexCoord);
-		else											// hills
-			diffuse = ObjTexture[0].Sample(ObjSamplerState, input.TexCoord);
-
-		//diffuse.a = 1.0f;
-	}
 
 	float3 finalColor;
 

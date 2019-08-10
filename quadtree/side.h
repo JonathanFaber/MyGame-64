@@ -33,25 +33,13 @@ public:
     }
 
     void drawClose() {
-		//Set Vertex and Pixel Shaders
-		d3d11DevCon->VSSetShader(PLANET_VS, 0, 0);
-		//set gs in drawClose
-		d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
-
-		//Set the Input Layout
-		d3d11DevCon->IASetInputLayout(planetLayout);
+		planetShader.setShader(true);
 
         quad->drawTerrain(true);
     }
 
     void drawFar() {
-		//Set Vertex and Pixel Shaders
-		d3d11DevCon->VSSetShader(PLANET_VS, 0, 0);
-		d3d11DevCon->GSSetShader(NULL, 0, 0);
-		d3d11DevCon->PSSetShader(PLANET_PS, 0, 0);
-
-		//Set the Input Layout
-		d3d11DevCon->IASetInputLayout(planetLayout);
+		planetShader.setShader(false);
 
         quad->drawTerrain(false);
     }

@@ -66,13 +66,7 @@ public:
 	}
 
 	void draw() {
-		//Set Vertex and Pixel Shaders
-		d3d11DevCon->VSSetShader(MODEL_VS, 0, 0);
-		d3d11DevCon->GSSetShader(NULL, 0, 0);
-		d3d11DevCon->PSSetShader(MODEL_PS, 0, 0);
-
-		//Set the Input Layout
-		d3d11DevCon->IASetInputLayout(modelLayout);
+		modelShader.setShader();
 
 		UINT stride = sizeof(ModelVertex);
 		UINT offset = 0;

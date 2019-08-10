@@ -39,9 +39,13 @@ private:
     XMMATRIX groundWorld;
     XMFLOAT3 translation;
 
-    PlanetVertex vertices[(chunkLength + 1)*(chunkLength + 1)*(chunkLength + 1)];
-    DWORD indices[chunkLength*chunkLength*chunkLength * 6];
-	int nIndices = chunkLength * chunkLength * chunkLength * 6;
+	TerrainPoint terrainPoint;
+	TerrainPoint terrainPoints[(chunkLength + 1)][(chunkLength + 1)][(chunkLength + 1)];
+
+    PlanetVertex vertices[(chunkLength)*(chunkLength)*(chunkLength)*8];
+    DWORD indices[chunkLength*chunkLength*chunkLength * 6 * 3];
+	int nVertices = 0;
+	int nIndices = chunkLength * chunkLength * chunkLength * 6 * 3;
 
     D3D11_BUFFER_DESC indexBufferDesc;
     D3D11_SUBRESOURCE_DATA indexBufferData;
@@ -72,77 +76,90 @@ inline void Quad::create() {
 	setIndexData();
 }
 
+bool isSame(TerrainPoint a, TerrainPoint b) {
+	return (a.landHeight < 0.0 && b.landHeight < 0.0) || (a.landHeight >= 0.0 && b.landHeight >= 0.0);
+}
+
 inline void Quad::setVertexData() {
+	for (int y = 0; y < (chunkLength + 1); y++) {
+		for (int z = 0; z < (chunkLength + 1); z++) {
+			for (int x = 0; x < (chunkLength + 1); x++) {
+				double3 temp = double3((x - chunkLength / 2.0) / (chunkLength / 2.0) * length, (y - chunkLength / 2.0) / (chunkLength / 2.0) * length, (z - chunkLength / 2.0) / (chunkLength / 2.0) * length);
+
+				temp = temp + pos;
+
+				terrainPoint.generateTerrainPoint(temp);
+				terrainPoints[y][z][x] = terrainPoint;				
+			}
+		}
+	}
+
 	counter = 0;
+	for (int y = 0; y < chunkLength; y++) {
+		for (int z = 0; z < chunkLength; z++) {
+			for (int x = 0; x < chunkLength; x++) {
+				TerrainPoint t[8];
 
-		for (int z = 0; z < (chunkLength + 1); z++) {
-			for (int x = 0; x < (chunkLength + 1); x++) {
-				double3 temp = double3((x - chunkLength / 2.0) / (chunkLength / 2.0) * length, 0.0, (z - chunkLength / 2.0) / (chunkLength / 2.0) * length);
+				t[0] = terrainPoints[y][z][x];
+				t[4] = terrainPoints[y][z][x + 1];
+				t[5] = terrainPoints[y][z + 1][x + 1];
+				t[1] = terrainPoints[y][z + 1][x];
+				t[2] = terrainPoints[y + 1][z][x];
+				t[6] = terrainPoints[y + 1][z][x + 1];
+				t[7] = terrainPoints[y + 1][z + 1][x + 1];
+				t[3] = terrainPoints[y + 1][z + 1][x];
 
-				temp = temp + pos;
+				bool above = false;
+				bool below = false;
+				bool belows[8];
 
-				double3 tempNormal = normalize(temp);
-				terrainPoint.generateTerrainPoint(tempNormal);
+				for (int i = 0; i < 8; i++) {
+					belows[i] = false;
+					if (t[i].landHeight < 0.0) {
+						below = true;
+						belows[i] = true;
+					}
+					else
+						above = true;
+				}
 
-				// temp = temp + terrainPoint.terrain;
-				temp = temp - firstCamPos;
+				if (above && below) {
+					/*for (int z1 = 0; z1 < 2; z1++) {
+						for (int y1 = 0; y1 < 2; y1++) {
+							for (int x1 = 0; x1 < 2; x1++) {
+								int idx[4];
+								idx[0] = x1 * 4 + y1 * 2 + z1;
+								idx[1] = ((x1 + 1) % 2) * 4 + ((y1) % 2) * 2 + ((z1) % 2);
+								idx[2] = ((x1) % 2) * 4 + ((y1 + 1) % 2) * 2 + ((z1) % 2);
+								idx[3] = ((x1) % 2) * 4 + ((y1) % 2) * 2 + ((z1 + 1) % 2);
 
-				vertices[counter].pos = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
-				vertices[counter].normal = XMFLOAT3(0.0f, 1.0f, 0.0f);
-				vertices[counter].texCoord = XMFLOAT2(float(((x - chunkLength / 2.0) / (chunkLength / 2.0)) * length), float(((z - chunkLength / 2.0) / (chunkLength / 2.0)) * length));
+								if (!isSame(t[idx[0]], t[idx[1]]))
+									;
+							}
+						}
+					}*/
 
-				vertices[counter].height = terrainPoint.height_f;
-				vertices[counter++].landTypeHeight = terrainPoint.landTypeHeight_f;
+					for (int i = 0; i < 8; i++) {
+						double3 temp = t[i].pos - firstCamPos;
+
+						vertices[counter].pos = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
+						vertices[counter].normal = i < 4 ? XMFLOAT3(0.0f, 1.0f, 0.0f) : XMFLOAT3(1.0f, 0.0f, 0.0f);
+						vertices[counter].texCoord = XMFLOAT2(float(((x - chunkLength / 2.0) / (chunkLength / 2.0)) * length), float(((z - chunkLength / 2.0) / (chunkLength / 2.0)) * length));
+
+						vertices[counter].height = t[i].landHeight;
+						vertices[counter++].landTypeHeight = t[i].landHeight;
+					}
+				}
 			}
 		}
-
-	for (int y = 0; y < (chunkLength + 1); y++) {
-			for (int x = 0; x < (chunkLength + 1); x++) {
-				double3 temp = double3((x - chunkLength / 2.0) / (chunkLength / 2.0) * length, (y - chunkLength / 2.0) / (chunkLength / 2.0) * length, 0.0);
-
-				temp = temp + pos;
-
-				double3 tempNormal = normalize(temp);
-				terrainPoint.generateTerrainPoint(tempNormal);
-
-				// temp = temp + terrainPoint.terrain;
-				temp = temp - firstCamPos;
-
-				vertices[counter].pos = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
-				vertices[counter].normal = XMFLOAT3(0.0f, 1.0f, 0.0f);
-				vertices[counter].texCoord = XMFLOAT2(float(((x - chunkLength / 2.0) / (chunkLength / 2.0)) * length), float(((y - chunkLength / 2.0) / (chunkLength / 2.0)) * length));
-
-				vertices[counter].height = terrainPoint.height_f;
-				vertices[counter++].landTypeHeight = terrainPoint.landTypeHeight_f;
-			}
 	}
-
-	for (int y = 0; y < (chunkLength + 1); y++) {
-		for (int z = 0; z < (chunkLength + 1); z++) {
-				double3 temp = double3(0.0, (y - chunkLength / 2.0) / (chunkLength / 2.0) * length, (z - chunkLength / 2.0) / (chunkLength / 2.0) * length);
-
-				temp = temp + pos;
-
-				double3 tempNormal = normalize(temp);
-				terrainPoint.generateTerrainPoint(tempNormal);
-
-				// temp = temp + terrainPoint.terrain;
-				temp = temp - firstCamPos;
-
-				vertices[counter].pos = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
-				vertices[counter].normal = XMFLOAT3(0.0f, 1.0f, 0.0f);
-				vertices[counter].texCoord = XMFLOAT2(float(((y - chunkLength / 2.0) / (chunkLength / 2.0)) * length), float(((z - chunkLength / 2.0) / (chunkLength / 2.0)) * length));
-
-				vertices[counter].height = terrainPoint.height_f;
-				vertices[counter++].landTypeHeight = terrainPoint.landTypeHeight_f;
-		}
-	}
+	nVertices = counter;
 
 	ZeroMemory(&initialVertexBufferData, sizeof(initialVertexBufferData));
 	ZeroMemory(&vertexBufferDesc, sizeof(vertexBufferDesc));
 
 	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	vertexBufferDesc.ByteWidth = sizeof(vertices);
+	vertexBufferDesc.ByteWidth = sizeof(PlanetVertex) * nVertices;
 	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
 	vertexBufferDesc.CPUAccessFlags = 0;
 	vertexBufferDesc.MiscFlags = 0;
@@ -152,21 +169,31 @@ inline void Quad::setVertexData() {
 }
 
 inline void Quad::setIndexData() {
+	DWORD idx[8];
 	counter = 0;
 	// might need to do order 012032 for gs shader
-	for (int y = 0; y < 3; y++) {
-		for (int x = 0; x < chunkLength; x++) {
-			for (int z = 0; z < chunkLength; z++) {
-				if (true) {
-					indices[counter++] = x + z * (chunkLength + 1) + y * (chunkLength + 1) * (chunkLength + 1); // 0
-					indices[counter++] = x + 1 + z * (chunkLength + 1) + y * (chunkLength + 1) * (chunkLength + 1); // 1
-					indices[counter++] = x + (chunkLength + 2) + z * (chunkLength + 1) + y * (chunkLength + 1) * (chunkLength + 1); // 2
-					indices[counter++] = x + z * (chunkLength + 1) + y * (chunkLength + 1) * (chunkLength + 1); // 0
-					indices[counter++] = x + (chunkLength + 2) + z * (chunkLength + 1) + y * (chunkLength + 1) * (chunkLength + 1); // 2
-					indices[counter++] = x + (chunkLength + 1) + z * (chunkLength + 1) + y * (chunkLength + 1) * (chunkLength + 1); // 3
-				}
-			}
-		}
+	for (int i = 0; i < nVertices / 8; i++) {
+					// first square
+					indices[counter++] = 8 * i;
+					indices[counter++] = 8 * i + 4;
+					indices[counter++] = 8 * i + 5;
+					indices[counter++] = 8 * i;
+					indices[counter++] = 8 * i + 5;
+					indices[counter++] = 8 * i + 1;
+					// second
+					indices[counter++] = 8 * i;
+					indices[counter++] = 8 * i + 4;
+					indices[counter++] = 8 * i + 6;
+					indices[counter++] = 8 * i;
+					indices[counter++] = 8 * i + 6;
+					indices[counter++] = 8 * i + 2;
+					// third
+					indices[counter++] = 8 * i + 1;
+					indices[counter++] = 8 * i;
+					indices[counter++] = 8 * i + 2;
+					indices[counter++] = 8 * i + 1;
+					indices[counter++] = 8 * i + 2;
+					indices[counter++] = 8 * i + 3;
 	}
 	nIndices = counter;
 
@@ -215,8 +242,10 @@ inline void Quad::addQuads(int *added, bool onlyVisible) {
 				child[i]->addQuads(added, onlyVisible);
 		}
 		else if (subdivide && (dotProduct(posAway, camDir) > 0.5 || !onlyVisible)) {
-			makeChildren();
-			(*added)++;
+			if (nVertices > 0) {
+				makeChildren();
+				(*added)++;
+			}
 		}
 	}
 }
@@ -303,7 +332,8 @@ inline void Quad::drawTerrain(bool drawClose) {
 					d3d11DevCon->RSSetState(RSCullNone); // For grass
 				else
 					d3d11DevCon->RSSetState(CCWcullMode);*/
-                d3d11DevCon->RSSetState(Wireframe);
+				d3d11DevCon->RSSetState(RSCullNone);
+                //d3d11DevCon->RSSetState(Wireframe);
                 d3d11DevCon->DrawIndexed(nIndices, 0, 0);
             }
         }
@@ -355,8 +385,10 @@ inline void Quad::makeChildren() {
 }
 
 inline Quad::~Quad() {
-    vertBuffer->Release();
-    indexBuffer->Release();
+	if (vertBuffer != nullptr)
+		vertBuffer->Release();
+	if (indexBuffer != nullptr)
+		indexBuffer->Release();
     for (int i = 0; i < N_CHILDREN; i++) {
         delete child[i];
         child[i] = nullptr;

@@ -154,8 +154,7 @@ public:
 		UINT stride2 = sizeof( Vertex );
 		UINT offset2 = 0;
 
-		//Set the Input Layout
-		d3d11DevCon->IASetInputLayout( vertLayout );
+		skymapShader.setShader();
 
 		//Set the spheres index buffer
 		d3d11DevCon->IASetIndexBuffer( indexBuffer, DXGI_FORMAT_R32_UINT, 0);
@@ -172,9 +171,6 @@ public:
 		d3d11DevCon->PSSetShaderResources( 0, 1, &smrv );
 		d3d11DevCon->PSSetSamplers( 0, 1, &CubesTexSamplerState );
 
-		//Set the new VS and PS shaders
-		d3d11DevCon->VSSetShader(SKYMAP_VS, 0, 0);
-		d3d11DevCon->PSSetShader(SKYMAP_PS, 0, 0);
 		//Set the new depth/stencil and RS states
 		d3d11DevCon->OMSetDepthStencilState(DSLessEqual, 0);
 		d3d11DevCon->RSSetState(RSCullNone);

@@ -282,7 +282,7 @@ struct SpriteVertex	//Overloaded Vertex Structure
 };
 
 
-D3D11_INPUT_ELEMENT_DESC layout[] =
+D3D11_INPUT_ELEMENT_DESC layoutDesc[] =
 {
 	{ "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D11_INPUT_PER_VERTEX_DATA, 0 },  
 	{ "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D11_INPUT_PER_VERTEX_DATA, 0 },  
@@ -322,15 +322,6 @@ D3D11_INPUT_ELEMENT_DESC instance_layout[] =
 	{ "INSTANCEPOS", 0, DXGI_FORMAT_R32G32_FLOAT, 1, 0, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 	{ "INSTANCEHEIGHTS", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 1, 8, D3D11_INPUT_PER_INSTANCE_DATA, 1 },
 };
-
-UINT numElements = ARRAYSIZE(layout);
-UINT numModelElements = ARRAYSIZE(modelLayoutDesc);
-UINT numPlanetElements = ARRAYSIZE(planetLayoutDesc);
-UINT numSpriteElements = ARRAYSIZE(spriteLayoutDesc);
-UINT numInstanceElements = ARRAYSIZE(instance_layout);
-
-
-
 
 struct double2 {
 	double x;
