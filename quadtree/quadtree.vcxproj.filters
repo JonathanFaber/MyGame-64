@@ -99,5 +99,8 @@
     <FxCompile Include="default.hlsl">
       <Filter>Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="compute.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
   </ItemGroup>
 </Project>

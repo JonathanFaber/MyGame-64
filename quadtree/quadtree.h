@@ -10,6 +10,19 @@
 
 #define N_CHILDREN 8
 
+struct InputData
+{
+	XMFLOAT3 position;
+	XMFLOAT3 velocity;
+	XMFLOAT3 initialVelocity;
+};
+
+struct OutputData
+{
+	XMFLOAT3 position;
+	XMFLOAT3 velocity;
+};
+
 class Quad {
 public:
     Quad() {}
@@ -50,7 +63,7 @@ private:
     D3D11_BUFFER_DESC indexBufferDesc;
     D3D11_SUBRESOURCE_DATA indexBufferData;
     D3D11_BUFFER_DESC vertexBufferDesc;
-    D3D11_SUBRESOURCE_DATA initialVertexBufferData;
+    D3D11_SUBRESOURCE_DATA vertexBufferData;
 
 	void create();
 	void setVertexData();
@@ -72,8 +85,29 @@ inline void Quad::create() {
     subdivide = false;
     combine = false;
 
-	setVertexData();
-	setIndexData();
+	const int NUM_PARTICLES = 10000;
+	D3D11_SUBRESOURCE_DATA inputBufferData;
+
+	InputData particles[NUM_PARTICLES];
+
+	for (int i = 0; i < NUM_PARTICLES; i++) {
+		particles[i].initialVelocity = XMFLOAT3(0.0f, 0.0f, 0.0f);
+		particles[i].velocity = XMFLOAT3(0.0f, 5.0f, 0.0f);
+		particles[i].position = XMFLOAT3(1.0f, 0.0f, 10.0f);
+	}
+
+	ZeroMemory(&inputBufferData, sizeof(inputBufferData));
+	inputBufferData.pSysMem = particles;
+
+	computeShader.setData(&inputBufferData, sizeof(InputData), sizeof(OutputData), NUM_PARTICLES);
+
+	// Enable Compute Shader
+	OutputData* dataView = reinterpret_cast<OutputData*>(computeShader.runComputation(int3(1024, 1, 1)));
+
+	if (dataView[0].position.y == 5.0f) {
+		setVertexData();
+		setIndexData();
+	}
 }
 
 bool isSame(TerrainPoint a, TerrainPoint b) {
@@ -155,7 +189,7 @@ inline void Quad::setVertexData() {
 	}
 	nVertices = counter;
 
-	ZeroMemory(&initialVertexBufferData, sizeof(initialVertexBufferData));
+	ZeroMemory(&vertexBufferData, sizeof(vertexBufferData));
 	ZeroMemory(&vertexBufferDesc, sizeof(vertexBufferDesc));
 
 	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -164,8 +198,8 @@ inline void Quad::setVertexData() {
 	vertexBufferDesc.CPUAccessFlags = 0;
 	vertexBufferDesc.MiscFlags = 0;
 
-	initialVertexBufferData.pSysMem = vertices;
-	hr = d3d11Device->CreateBuffer(&vertexBufferDesc, &initialVertexBufferData, &vertBuffer);
+	vertexBufferData.pSysMem = vertices;
+	hr = d3d11Device->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &vertBuffer);
 }
 
 inline void Quad::setIndexData() {

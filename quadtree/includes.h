@@ -138,8 +138,8 @@ int permutation[256];
 int counter = 0;
 
 const int chunkLength = 8;
-const double maxLength = 4194304.0;
-const double minLength = 4194304.0 / 16;
+const double minLength = chunkLength;
+const double maxLength = chunkLength * 4;
 
 //Function Prototypes//
 bool InitializeDirect3d11App(HINSTANCE hInstance);
@@ -629,7 +629,7 @@ struct osn_context *ctx;
 
 // camera
 
-double3 camPos = double3(0.0, 5000000.0, 0.0);
+double3 camPos = double3(0.0, 0.0, -60.0);
 
 double3 lastCamPos = camPos;
 double3 camOffset;
@@ -661,7 +661,7 @@ double y_vel_old;
 double z_vel = 0.0;
 
 double playerVelocity;
-double speed = 100.0;
+double speed = 10.0;
 double maxSpeed = 200.0;
 double speedTime;
 double maxspeedTime;
