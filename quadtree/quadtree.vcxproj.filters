@@ -82,6 +82,9 @@
     <None Include="noise4d.hlsli">
       <Filter>Shaders</Filter>
     </None>
+    <None Include="noise3dd.hlsli">
+      <Filter>Shaders</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="model.hlsl">

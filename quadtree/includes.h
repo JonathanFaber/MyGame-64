@@ -139,7 +139,7 @@ int counter = 0;
 
 const int chunkLength = 8;
 const double minLength = chunkLength;
-const double maxLength = chunkLength * 4;
+const double maxLength = chunkLength * 64;
 
 //Function Prototypes//
 bool InitializeDirect3d11App(HINSTANCE hInstance);
@@ -336,8 +336,9 @@ struct double3 {
 	double y;
 	double z;
 
-	double3() {}
+	double3() { x = 0; y = 0; z = 0; }
 	double3(double x, double y, double z) : x(x), y(y), z(z) {}
+	double3(XMFLOAT3 v) : x(v.x), y(v.y), z(v.z) {}
 
 	double3 operator+(const double3 &v) {
 		return double3(this->x + v.x, this->y + v.y, this->z + v.z);
@@ -353,6 +354,10 @@ struct double3 {
 
 	double3 operator/(const double &v) {
 		return double3(this->x / v, this->y / v, this->z / v);
+	}
+
+	XMFLOAT3 float3() {
+		return XMFLOAT3(x, y, z);
 	}
 };
 
@@ -462,168 +467,18 @@ double dotProduct(double3 a2, double3 b2) {
 	return a2.x*b2.x + a2.y*b2.y + a2.z*b2.z;
 }
 
-XMFLOAT3 crossProduct(XMFLOAT3 a, XMFLOAT3 b){
+XMFLOAT3 crossProduct(XMFLOAT3 a, XMFLOAT3 b) {
 	return XMFLOAT3(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x);
+}
+
+double3 crossProduct(double3 a, double3 b) {
+	return double3(a.y*b.z - a.z*b.y, a.z*b.x - a.x*b.z, a.x*b.y - a.y*b.x);
 }
 
 inline bool exists(const std::string& name) {
 	struct stat buffer;
 	return (stat(name.c_str(), &buffer) == 0);
 }
-
-double3 spherize(double3 pos) {
-	double3 posSquare1;
-
-	posSquare1.x = pos.x * sqrt(1.0 - pos.y*pos.y / 2.0 - pos.z*pos.z / 2.0 + pos.y*pos.y*pos.z*pos.z / 3.0);
-	posSquare1.y = pos.y * sqrt(1.0 - pos.x*pos.x / 2.0 - pos.z*pos.z / 2.0 + pos.x*pos.x*pos.z*pos.z / 3.0);
-	posSquare1.z = pos.z * sqrt(1.0 - pos.y*pos.y / 2.0 - pos.x*pos.x / 2.0 + pos.y*pos.y*pos.x*pos.x / 3.0);
-
-	return posSquare1;
-}
-
-
-void cubizePoint(double3& position)
-{
-	double x, y, z;
-	x = position.x;
-	y = position.y;
-	z = position.z;
-
-	double fx, fy, fz;
-	fx = positive(x);
-	fy = positive(y);
-	fz = positive(z);
-
-	const double inverseSqrt2 = 0.70710676908493042;
-
-	if (fy >= fx && fy >= fz) {
-		double a2 = x * x * 2.0;
-		double b2 = z * z * 2.0;
-		double inner = -a2 + b2 - 3;
-		double innersqrt = -sqrt((inner * inner) - 12.0 * a2);
-
-		if (x == 0.0) {
-			position.x = 0.0;
-		}
-		else {
-			position.x = sqrt(innersqrt + a2 - b2 + 3.0) * inverseSqrt2;
-		}
-
-		if (z == 0.0) {
-			position.z = 0.0;
-		}
-		else {
-			position.z = sqrt(innersqrt - a2 + b2 + 3.0) * inverseSqrt2;
-		}
-
-		if (position.x > 1.0)
-			position.x = 1.0;
-		if (position.z > 1.0)
-			position.z = 1.0;
-
-		if (x < 0)
-			position.x = -position.x;
-		if (z < 0)
-			position.z = -position.z;
-
-		if (y > 0) {
-			// top face
-			position.y = 1.0;
-		}
-		else {
-			// bottom face
-			position.y = -1.0;
-		}
-	}
-	else if (fx >= fy && fx >= fz) {
-		double a2 = y * y * 2.0;
-		double b2 = z * z * 2.0;
-		double inner = -a2 + b2 - 3;
-		double innersqrt = -sqrt((inner * inner) - 12.0 * a2);
-
-		if (y == 0.0 || y == -0.0) {
-			position.y = 0.0;
-		}
-		else {
-			position.y = sqrt(innersqrt + a2 - b2 + 3.0) * inverseSqrt2;
-		}
-
-		if (z == 0.0 || z == -0.0) {
-			position.z = 0.0;
-		}
-		else {
-			position.z = sqrt(innersqrt - a2 + b2 + 3.0) * inverseSqrt2;
-		}
-
-		if (position.y > 1.0)
-			position.y = 1.0;
-		if (position.z > 1.0)
-			position.z = 1.0;
-
-		if (y < 0)
-			position.y = -position.y;
-		if (z < 0)
-			position.z = -position.z;
-
-		if (x > 0) {
-			// right face
-			position.x = 1.0;
-		}
-		else {
-			// left face
-			position.x = -1.0;
-		}
-	}
-	else {
-		double a2 = x * x * 2.0;
-		double b2 = y * y * 2.0;
-		double inner = -a2 + b2 - 3;
-		double innersqrt = -sqrt((inner * inner) - 12.0 * a2);
-
-		if (x == 0.0 || x == -0.0) {
-			position.x = 0.0;
-		}
-		else {
-			position.x = sqrt(innersqrt + a2 - b2 + 3.0) * inverseSqrt2;
-		}
-
-		if (y == 0.0 || y == -0.0) {
-			position.y = 0.0;
-		}
-		else {
-			position.y = sqrt(innersqrt - a2 + b2 + 3.0) * inverseSqrt2;
-		}
-
-		if (position.x > 1.0) position.x = 1.0;
-		if (position.y > 1.0) position.y = 1.0;
-
-		if (x < 0) position.x = -position.x;
-		if (y < 0) position.y = -position.y;
-
-		if (z > 0) {
-			// front face
-			position.z = 1.0;
-		}
-		else {
-			// back face
-			position.z = -1.0;
-		}
-	}
-
-}
-
-
-void spherizePoint(double3& position)
-{
-	double x = position.x;
-	double y = position.y;
-	double z = position.z;
-
-	position.x = x * sqrt(1.0 - (y*y / 2.0) - (z*z / 2.0) + (y*y*z*z / 3.0));
-	position.y = y * sqrt(1.0 - (z*z / 2.0) - (x*x / 2.0) + (z*z*x*x / 3.0));
-	position.z = z * sqrt(1.0 - (x*x / 2.0) - (y*y / 2.0) + (x*x*y*y / 3.0));
-}
-
 
 struct osn_context *ctx;
 

@@ -20,31 +20,36 @@ public:
 		hr = d3d11Device->CreateComputeShader(CS_Buffer->GetBufferPointer(), CS_Buffer->GetBufferSize(), NULL, &CS);
 	}
 
-	void setData(D3D11_SUBRESOURCE_DATA* inputBufferData, UINT inputSize, UINT outputSize, UINT count, bool dynamic = false) {
+	void setData(void* inputData, UINT inputSize, UINT outputSize, UINT inputCount, UINT outputCount, bool dynamic = false) {
+		D3D11_SUBRESOURCE_DATA inputBufferData;
+
+		ZeroMemory(&inputBufferData, sizeof(inputBufferData));
+		inputBufferData.pSysMem = inputData;
+
 		// Create a buffer to be bound as Compute Shader input (D3D11_BIND_SHADER_RESOURCE).
 		D3D11_BUFFER_DESC inputBufferDesc;
 		inputBufferDesc.Usage = dynamic ? D3D11_USAGE_DYNAMIC : D3D11_USAGE_DEFAULT;
-		inputBufferDesc.ByteWidth = inputSize * count;
+		inputBufferDesc.ByteWidth = inputSize * inputCount;
 		inputBufferDesc.BindFlags = D3D11_BIND_SHADER_RESOURCE;
 		inputBufferDesc.CPUAccessFlags = dynamic ? D3D11_CPU_ACCESS_WRITE : 0;
 		inputBufferDesc.StructureByteStride = inputSize;
 		inputBufferDesc.MiscFlags = D3D11_RESOURCE_MISC_BUFFER_STRUCTURED;
 
-		hr = d3d11Device->CreateBuffer(&inputBufferDesc, inputBufferData, &inputBuffer);
+		hr = d3d11Device->CreateBuffer(&inputBufferDesc, &inputBufferData, &inputBuffer);
 
 		D3D11_SHADER_RESOURCE_VIEW_DESC srvDesc;
 		srvDesc.Format = DXGI_FORMAT_UNKNOWN;
 		srvDesc.ViewDimension = D3D11_SRV_DIMENSION_BUFFEREX;
 		srvDesc.BufferEx.FirstElement = 0;
 		srvDesc.BufferEx.Flags = 0;
-		srvDesc.BufferEx.NumElements = count;
+		srvDesc.BufferEx.NumElements = inputCount;
 
 		hr = d3d11Device->CreateShaderResourceView(inputBuffer, &srvDesc, &inputView);
 
 		// (D3D11_BIND_UNORDERED_ACCESS).
 		D3D11_BUFFER_DESC outputDesc;
 		outputDesc.Usage = D3D11_USAGE_DEFAULT;
-		outputDesc.ByteWidth = outputSize * count;
+		outputDesc.ByteWidth = outputSize * outputCount;
 		outputDesc.BindFlags = D3D11_BIND_UNORDERED_ACCESS;
 		outputDesc.CPUAccessFlags = 0;
 		outputDesc.StructureByteStride = outputSize;
@@ -61,7 +66,7 @@ public:
 		D3D11_UNORDERED_ACCESS_VIEW_DESC uavDesc;
 		uavDesc.Buffer.FirstElement = 0;
 		uavDesc.Buffer.Flags = 0;
-		uavDesc.Buffer.NumElements = count;
+		uavDesc.Buffer.NumElements = outputCount;
 		uavDesc.Format = DXGI_FORMAT_UNKNOWN;
 		uavDesc.ViewDimension = D3D11_UAV_DIMENSION_BUFFER;
 
