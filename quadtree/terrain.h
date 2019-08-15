@@ -11,7 +11,7 @@ public:
 
 	TerrainPoint() {};
 	TerrainPoint(double3 pos) {
-		double amplitude = 1000.0;
+		double amplitude = 1024.0;
 		double maxAmplitude = 0.0;
 		double freq = 1.0 / 256.0;
 		double lacunarity = 2.0;
@@ -20,7 +20,7 @@ public:
 		this->pos = pos;
 		noiseHeight = 0.0;
 
-		for (int k = 0; k < 22; k++) {
+		for (int k = 0; k < 10; k++) {
 			noiseHeight += raw_noise_3d(pos.x * freq, pos.y * freq, pos.z * freq) * amplitude;
 			maxAmplitude += amplitude;
 			amplitude *= persistence;

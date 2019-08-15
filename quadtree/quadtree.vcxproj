@@ -171,6 +171,7 @@
     <ClInclude Include="terrain.h" />
     <ClInclude Include="text.h" />
     <ClInclude Include="timer.h" />
+    <ClInclude Include="Transvoxel.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
