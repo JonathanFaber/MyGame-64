@@ -2,38 +2,37 @@
 // Created by Jonathan Faber on 2017-02-16.
 //
 
-#ifndef MYGAME_64_QUADTREE_H
-#define MYGAME_64_QUADTREE_H
+#ifndef MYGAME_64_OCTTREE_H
+#define MYGAME_64_OCTTREE_H
 
 #include "includes.h"
 #include "terrain.h"
-#include "Transvoxel.h"
+#include "transvoxel.h"
 
 #define N_CHILDREN 8
 
-class Quad {
+class Oct {
 public:
-    Quad() {}
-    Quad(double3 pos, double length);
-    ~Quad();
-
-    double3 firstCamPos;
+    Oct() {}
+    Oct(double3 pos, double length);
+    ~Oct();
 
     void update();
     void transform();
     void drawTerrain(bool drawClose);
-	void addQuads(int *added, bool onlyVisible);
-	void removeQuads(int len);
+	void addOcts(int *added, bool onlyVisible);
+	void removeOcts(int len);
 
 private:
 	double3 pos;
 	double3 posAway;
 	double distance;
 	double length;
-	bool subdivide;
-	bool combine;
-	bool draw;
-	Quad *child[N_CHILDREN];
+	double3 firstCamPos = camPos;
+	bool subdivide = false;
+	bool combine = false;
+	bool draw = true;
+	Oct *child[N_CHILDREN];
 
     ID3D11Buffer* indexBuffer;
     ID3D11Buffer* vertBuffer;
@@ -43,65 +42,49 @@ private:
     PlanetVertex vertices[(chunkLength)*(chunkLength)*(chunkLength)*12];
     DWORD indices[chunkLength*chunkLength*chunkLength * 6 * 3];
 	int nVertices = 0;
-	int nIndices = chunkLength * chunkLength * chunkLength * 6 * 3;
+	int nIndices = 0;
 
-    D3D11_BUFFER_DESC indexBufferDesc;
     D3D11_SUBRESOURCE_DATA indexBufferData;
-    D3D11_BUFFER_DESC vertexBufferDesc;
     D3D11_SUBRESOURCE_DATA vertexBufferData;
 
-	void create();
-	void setVertexData();
-	void setIndexData();
+	void setTerrainData();
 	void makeChildren();
+	TerrainPoint interpolateVertex(TerrainPoint a, TerrainPoint b, float threshold);
 };
 
-inline Quad::Quad(double3 pos, double length) {
+inline Oct::Oct(double3 pos, double length) {
     this->pos = pos;
     this->length = length;
-    create();
+	draw = true;
+	subdivide = false;
+	combine = false;
+
+	for (int i = 0; i < N_CHILDREN; i++)
+		child[i] = nullptr;
+
+	setTerrainData();
 }
 
-inline void Quad::create() {
-    for (int i = 0; i < N_CHILDREN; i++)
-        child[i] = nullptr;
-
-    draw = true;
-    subdivide = false;
-    combine = false;
-
-	setVertexData();
-	setIndexData();
-}
-
-bool isSame(TerrainPoint a, TerrainPoint b) {
-	return (a.noiseHeight < 0.0 && b.noiseHeight < 0.0) || (a.noiseHeight >= 0.0 && b.noiseHeight >= 0.0);
-}
-
-bool comparePoints(double3 a, double3 b)
+inline TerrainPoint Oct::interpolateVertex(TerrainPoint a, TerrainPoint b, float threshold)
 {
-	if (a.x < b.x)
-		return true;
-	else if (a.x > b.x)
-		return false;
+	bool flip = false;
 
-	if (a.y < b.y)
-		return true;
-	else if (a.y > b.y)
-		return false;
+	if (a.pos.x > b.pos.x)
+		flip = true;
+	else if (a.pos.x < b.pos.x)
+		flip = false;
 
-	if (a.z < b.z)
-		return true;
-	else if (a.z > b.z)
-		return false;
+	if (a.pos.y > b.pos.y)
+		flip = true;
+	else if (a.pos.y < b.pos.y)
+		flip = false;
 
-	return false;
-}
+	if (a.pos.z > b.pos.z)
+		flip = true;
+	else if (a.pos.z < b.pos.z)
+		flip = false;
 
-TerrainPoint vertInter(TerrainPoint a, TerrainPoint b, float threshold)
-{
-	if (comparePoints(b.pos, a.pos))
-	{
+	if (flip) {
 		TerrainPoint temp;
 		temp = a;
 		a = b;
@@ -114,18 +97,7 @@ TerrainPoint vertInter(TerrainPoint a, TerrainPoint b, float threshold)
 		return a;
 }
 
-//TerrainPoint vertInter(TerrainPoint a, TerrainPoint b, double threshold) {
-//	if (abs(threshold - a.noiseHeight) < 0.00001)
-//		return a;
-//	if (abs(threshold - b.noiseHeight) < 0.00001)
-//		return b;
-//	if (abs(a.noiseHeight - b.noiseHeight) < 0.00001)
-//		return a;
-//
-//	return TerrainPoint(a.pos + (b.pos - a.pos) * (threshold - a.noiseHeight) / (b.noiseHeight - a.noiseHeight), threshold);
-//}
-
-inline void Quad::setVertexData() {
+inline void Oct::setTerrainData() {
 	TerrainPoint terrainPoints[(chunkLength + 1)][(chunkLength + 1)][(chunkLength + 1)];
 
 	for (int y = 0; y < (chunkLength + 1); y++) {
@@ -137,7 +109,9 @@ inline void Quad::setVertexData() {
 		}
 	}
 
-	counter = 0;
+	nVertices = 0;
+	nIndices = 0;
+
 	for (int z = 0; z < chunkLength; z++) {
 		for (int y = 0; y < chunkLength; y++) {
 			for (int x = 0; x < chunkLength; x++) {
@@ -145,24 +119,24 @@ inline void Quad::setVertexData() {
 
 				double3 cubeNormal = double3();
 				double3 cubeNormals[8] = {
+					double3(-1, -1, -1),
+					double3(1, -1, -1),
+					double3(-1, 1, -1),
+					double3(1, 1, -1),
 					double3(-1, -1, 1),
 					double3(1, -1, 1),
-					double3(1, -1, -1),
-					double3(-1, -1, 1),
 					double3(-1, 1, 1),
 					double3(1, 1, 1),
-					double3(1, 1, -1),
-					double3(-1, 1, -1),
 				};
 
-				t[3] = terrainPoints[y][z][x];
-				t[2] = terrainPoints[y][z][x + 1];
-				t[1] = terrainPoints[y][z + 1][x + 1];
-				t[0] = terrainPoints[y][z + 1][x];
-				t[7] = terrainPoints[y + 1][z][x];
-				t[6] = terrainPoints[y + 1][z][x + 1];
-				t[5] = terrainPoints[y + 1][z + 1][x + 1];
-				t[4] = terrainPoints[y + 1][z + 1][x];
+				t[3] = terrainPoints[y + 1][z][x + 1];
+				t[2] = terrainPoints[y + 1][z][x];
+				t[1] = terrainPoints[y][z][x + 1];
+				t[0] = terrainPoints[y][z][x];
+				t[7] = terrainPoints[y + 1][z + 1][x + 1];
+				t[6] = terrainPoints[y + 1][z + 1][x];
+				t[5] = terrainPoints[y][z + 1][x + 1];
+				t[4] = terrainPoints[y][z + 1][x];
 
 				bool above = false;
 				bool below = false;
@@ -194,8 +168,6 @@ inline void Quad::setVertexData() {
 					if (t[6].noiseHeight <= 0.0) cubeindex |= 64;
 					if (t[7].noiseHeight <= 0.0) cubeindex |= 128;
 
-					INT8* edges = edgeTable[cubeindex];
-
 					RegularCellData cellData = regularCellData[regularCellClass[cubeindex]];
 
 					UINT vertCount = cellData.GetVertexCount();
@@ -203,105 +175,48 @@ inline void Quad::setVertexData() {
 
 					const USHORT* vertData = regularVertexData[cubeindex];
 
-					for (int i = 0; i < 12; i++) {
+					for (int i = 0; i < vertCount; i++) {
 						TerrainPoint tp;
-						/*
+						
 						USHORT edgeCode = vertData[i];
 
 						USHORT v0 = (edgeCode >> 4) & 0x0F;
 						USHORT v1 = edgeCode & 0x0F;
 
-						long d0 = corner[v0]; long d1 = corner[v1];
-						long t = (d1 << 8) / (d1 - d0);
-
-						if ((t & 0x00FF) != 0) {  // Vertex lies in the interior of the edge. 
-							long u = 0x0100 - t;  Q = t * P0 + u * P1;
-						}
-						else if (t == 0) {  // Vertex lies at the higher-numbered endpoint. 
-							if (v1 == 7) {   
-								// This cell owns the vertex.  
-							}  else  {   
-								// Try to reuse corner vertex from a preceding cell.  
-							} 
-						}
-						else {
-							// Vertex lies at the lower-numbered endpoint.  // Always try to reuse corner vertex from a preceding cell
-						}
-						*/
-
-						if (edges[i] == -1) break;
-						if (edges[i] == 0) {
-							tp = vertInter(t[0], t[1], 0.0);
-						}
-						else if (edges[i] == 1) {
-							tp = vertInter(t[2], t[1], 0.0);
-						}
-						else if (edges[i] == 2) {
-							tp = vertInter(t[3], t[2], 0.0);
-						}
-						else if (edges[i] == 3) {
-							tp = vertInter(t[3], t[0], 0.0);
-						}
-						else if (edges[i] == 4) {
-							tp = vertInter(t[4], t[5], 0.0);
-						}
-						else if (edges[i] == 5) {
-							tp = vertInter(t[6], t[5], 0.0);
-						}
-						else if (edges[i] == 6) {
-							tp = vertInter(t[7], t[6], 0.0);
-						}
-						else if (edges[i] == 7) {
-							tp = vertInter(t[7], t[4], 0.0);
-						}
-						else if (edges[i] == 8) {
-							tp = vertInter(t[0], t[4], 0.0);
-						}
-						else if (edges[i] == 9) {
-							tp = vertInter(t[1], t[5], 0.0);
-						}
-						else if (edges[i] == 10) {
-							tp = vertInter(t[2], t[6], 0.0);
-						}
-						else if (edges[i] == 11) {
-							tp = vertInter(t[3], t[7], 0.0);
-						}
+						tp = interpolateVertex(t[v0], t[v1], 0.0);
 
 						double3 temp = tp.pos - firstCamPos;
 
-						vertices[counter].pos = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
-						vertices[counter].normal = XMFLOAT3(0.0f, 0.0f, 0.0f);
+						vertices[nVertices].pos = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
+						vertices[nVertices].normal = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
 						if ((i + 1) % 3 == 0) {
-							double3 normal = normalize(crossProduct(double3(vertices[counter].pos) - double3(vertices[counter - 1].pos), double3(vertices[counter - 2].pos) - double3(vertices[counter - 1].pos)));
+							double3 normal = normalize(crossProduct(double3(vertices[nVertices].pos) - double3(vertices[nVertices - 1].pos), double3(vertices[nVertices - 2].pos) - double3(vertices[nVertices - 1].pos)));
 							
 							if (dotProduct(normal, cubeNormal) < 0.0)
 								normal = normal * -1;
 							for (int j = 0; j < 3; j++)
-								vertices[counter - j].normal = normal.float3();
+								vertices[nVertices - j].normal = normal.float3();
 						}
 
-						vertices[counter].texCoord = XMFLOAT2(float(((x - chunkLength / 2.0) / (chunkLength / 2.0)) * length), float(((z - chunkLength / 2.0) / (chunkLength / 2.0)) * length));
-						vertices[counter].height = tp.noiseHeight;
-						vertices[counter++].landTypeHeight = tp.noiseHeight;
+						vertices[nVertices].texCoord = XMFLOAT2(float(((x - chunkLength / 2.0) / (chunkLength / 2.0)) * length), float(((z - chunkLength / 2.0) / (chunkLength / 2.0)) * length));
+						vertices[nVertices].height = tp.noiseHeight;
+						vertices[nVertices++].landTypeHeight = tp.noiseHeight;
 					}
-					/*
-					for (int i = 0; i < 8; i++) {
-						double3 temp = t[i].pos - firstCamPos;
 
-						vertices[counter].pos = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
-						vertices[counter].normal = i < 4 ? XMFLOAT3(0.0f, 1.0f, 0.0f) : XMFLOAT3(1.0f, 0.0f, 0.0f);
-						vertices[counter].texCoord = XMFLOAT2(float(((x - chunkLength / 2.0) / (chunkLength / 2.0)) * length), float(((z - chunkLength / 2.0) / (chunkLength / 2.0)) * length));
-
-						vertices[counter].height = t[i].noiseHeight;
-						vertices[counter++].landTypeHeight = t[i].noiseHeight;
-					}*/
+					// Indices
+					for (int i = 0; i < triCount * 3; i++) {
+						indices[nIndices++] = cellData.vertexIndex[i] + nVertices - vertCount;
+					}
 				}
 			}
 		}
 	}
-	nVertices = counter;
 
+	D3D11_BUFFER_DESC indexBufferDesc;
+	D3D11_BUFFER_DESC vertexBufferDesc;
+
+	// Vertices
 	ZeroMemory(&vertexBufferData, sizeof(vertexBufferData));
 	ZeroMemory(&vertexBufferDesc, sizeof(vertexBufferDesc));
 
@@ -313,17 +228,9 @@ inline void Quad::setVertexData() {
 
 	vertexBufferData.pSysMem = vertices;
 	hr = d3d11Device->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &vertBuffer);
-}
 
-inline void Quad::setIndexData() {
-	counter = 0;
-	// might need to do order 012032 for gs shader
-	for (int i = 0; i < nVertices; i++) {
-		// first square
-		indices[counter++] = i;
-	}
-	nIndices = counter;
-
+	// Indices
+	ZeroMemory(&indexBufferData, sizeof(indexBufferData));
 	ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
 
 	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
@@ -336,7 +243,7 @@ inline void Quad::setIndexData() {
 	d3d11Device->CreateBuffer(&indexBufferDesc, &indexBufferData, &indexBuffer);
 }
 
-inline void Quad::update() {
+inline void Oct::update() {
     posAway = pos - camPos;
     distance = vLength(posAway);
 
@@ -362,11 +269,11 @@ inline void Quad::update() {
 	}
 }
 
-inline void Quad::addQuads(int *added, bool onlyVisible) {
+inline void Oct::addOcts(int *added, bool onlyVisible) {
 	if (*added < 1) {
 		if (subdivide && child[0] != nullptr) {
 			for (int i = 0; i < N_CHILDREN; i++)
-				child[i]->addQuads(added, onlyVisible);
+				child[i]->addOcts(added, onlyVisible);
 		}
 		else if (subdivide && (dotProduct(posAway, camDir) > 0.5 || !onlyVisible)) {
 			if (nVertices > 0) {
@@ -377,12 +284,12 @@ inline void Quad::addQuads(int *added, bool onlyVisible) {
 	}
 }
 
-inline void Quad::removeQuads(int len) {
+inline void Oct::removeOcts(int len) {
 	if (child[0] != nullptr) {
 		bool rem = true;
 		for (int i = 0; i < N_CHILDREN; i++) {
 			if (!child[i]->draw) {
-				child[i]->removeQuads(len);
+				child[i]->removeOcts(len);
 				rem = false;
 			}
 			else if (!child[i]->combine || child[i]->length != len) {
@@ -400,7 +307,7 @@ inline void Quad::removeQuads(int len) {
 	}
 }
 
-inline void Quad::transform() {
+inline void Oct::transform() {
     groundWorld = XMMatrixIdentity();
     Scale = XMMatrixScaling(1.0f, 1.0f, 1.0f);
     Translation = XMMatrixTranslation(float(firstCamPos.x - camPos.x), float(firstCamPos.y - camPos.y), float(firstCamPos.z - camPos.z));
@@ -413,7 +320,7 @@ inline void Quad::transform() {
 	}
 }
 
-inline void Quad::drawTerrain(bool drawClose) {
+inline void Oct::drawTerrain(bool drawClose) {
     if (draw) {
         if (dotProduct(posAway, camDir) > 0.5 || distance < length * 2.0) {
             if (distance < 900 && drawClose || distance >= 900 && !drawClose) {
@@ -474,40 +381,33 @@ inline void Quad::drawTerrain(bool drawClose) {
     }
 }
 
-inline void Quad::makeChildren() {
+inline void Oct::makeChildren() {
     for (int i = 0; i < N_CHILDREN; i++) {
-        child[i] = new Quad();
+		double3 childPos;
 
         if (i == 0) {
-            child[i]->pos = double3(pos.x - 0.5*length, pos.y - 0.5*length, pos.z - 0.5*length);
+            childPos = double3(pos.x - 0.5*length, pos.y - 0.5*length, pos.z - 0.5*length);
         } else if (i == 1) {
-            child[i]->pos = double3(pos.x + 0.5*length, pos.y - 0.5*length, pos.z - 0.5*length);
+            childPos = double3(pos.x + 0.5*length, pos.y - 0.5*length, pos.z - 0.5*length);
         } else if (i == 2) {
-            child[i]->pos = double3(pos.x + 0.5*length, pos.y - 0.5*length, pos.z + 0.5*length);
+            childPos = double3(pos.x + 0.5*length, pos.y - 0.5*length, pos.z + 0.5*length);
         } else if (i == 3) {
-            child[i]->pos = double3(pos.x - 0.5*length, pos.y - 0.5*length, pos.z + 0.5*length);
+            childPos = double3(pos.x - 0.5*length, pos.y - 0.5*length, pos.z + 0.5*length);
         } else if (i == 4) {
-			child[i]->pos = double3(pos.x - 0.5*length, pos.y + 0.5*length, pos.z - 0.5*length);
+			childPos = double3(pos.x - 0.5*length, pos.y + 0.5*length, pos.z - 0.5*length);
 		} else if (i == 5) {
-			child[i]->pos = double3(pos.x + 0.5*length, pos.y + 0.5*length, pos.z - 0.5*length);
+			childPos = double3(pos.x + 0.5*length, pos.y + 0.5*length, pos.z - 0.5*length);
 		} else if (i == 6) {
-			child[i]->pos = double3(pos.x + 0.5*length, pos.y + 0.5*length, pos.z + 0.5*length);
+			childPos = double3(pos.x + 0.5*length, pos.y + 0.5*length, pos.z + 0.5*length);
 		} else if (i == 7) {
-			child[i]->pos = double3(pos.x - 0.5*length, pos.y + 0.5*length, pos.z + 0.5*length);
+			childPos = double3(pos.x - 0.5*length, pos.y + 0.5*length, pos.z + 0.5*length);
 		}
         
-        child[i]->length = length / 2.0;
-        child[i]->firstCamPos = camPos;
-
-        child[i]->subdivide = false;
-        child[i]->combine = false;
-        child[i]->draw = true;
-
-        child[i]->create();
+        child[i] = new Oct(childPos, length / 2.0);
     }
 }
 
-inline Quad::~Quad() {
+inline Oct::~Oct() {
 	if (vertBuffer != nullptr)
 		vertBuffer->Release();
 	if (indexBuffer != nullptr)
@@ -520,6 +420,4 @@ inline Quad::~Quad() {
     }
 }
 
-
-
-#endif MYGAME_64_QUADTREE_H
+#endif MYGAME_64_OCTTREE_H

@@ -1,14 +1,14 @@
 #include "includes.h"
 #include "shaders.h"
 #include "camera.h"
-#include "side.h"
+#include "root.h"
 #include "sky.h"
 #include "timer.h"
 #include "sprites.h"
 #include "text.h"
 #include "model.h"
 
-Side *side;
+Root* octTree;
 
 int WINAPI WinMain(HINSTANCE hInstance,	//Main windows function
 	HINSTANCE hPrevInstance, 
@@ -264,7 +264,7 @@ void CleanUp()
 	DIMouse->Unacquire();
 	DirectInput->Release();
     
-	side->cleanUp();
+	octTree->cleanUp();
 	skybox.cleanUp();
 	//grass.cleanUp();
 	testModel.cleanUp();
@@ -306,7 +306,7 @@ bool InitScene()
 	light.ambient = XMFLOAT4(0.6f, 0.6f, 0.6f, 1.0f);
 	light.diffuse = XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
 	////////////////////////
-	side = new Side();
+	octTree = new Root();
 	//sprucetree.init(std::string("models/Pine_4m.obj"));
 	//grass.create();
 	testModel.load("models/nanosuit/", "nanosuit.obj");
@@ -561,7 +561,7 @@ void UpdateScene(double time)
 	timeSinceFpsCalc += float(time);
 	fpsCounter++;
 
-	side->update(camPos);
+	octTree->update(camPos);
 	//grass.update(camPos);
 	skybox.updateSphere();
 	testModel.update();
@@ -643,7 +643,7 @@ void DrawScene()
 	// draw everything with camProjection[1]
 	// CLEAR DEPTH STENCIL
 
-	side->drawFar();
+	octTree->drawFar();
 
 	d3d11DevCon->ClearDepthStencilView(depthStencilView, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0);
 
@@ -660,7 +660,7 @@ void DrawScene()
 	//Set the blend state for transparent objects
 	d3d11DevCon->OMSetBlendState(Transparency, blendFactor, 0xffffffff);
 
-	side->drawClose();
+	octTree->drawClose();
 
 	// Transparent with depth
 	//grass.draw();

@@ -161,17 +161,17 @@
     <ClInclude Include="includes.h" />
     <ClInclude Include="model.h" />
     <ClInclude Include="noiseFunctions.h" />
-    <ClInclude Include="quadtree.h" />
+    <ClInclude Include="oct.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="shaders.h" />
-    <ClInclude Include="side.h" />
+    <ClInclude Include="root.h" />
     <ClInclude Include="simplexnoise.h" />
     <ClInclude Include="sky.h" />
     <ClInclude Include="sprites.h" />
     <ClInclude Include="terrain.h" />
     <ClInclude Include="text.h" />
     <ClInclude Include="timer.h" />
-    <ClInclude Include="Transvoxel.h" />
+    <ClInclude Include="transvoxel.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />

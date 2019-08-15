@@ -5,50 +5,50 @@
 #ifndef MYGAME_64_SIDE_H
 #define MYGAME_64_SIDE_H
 
-#include "quadtree.h"
+#include "oct.h"
 #include "shaders.h"
 
-class Side {
-    Quad *quad;
+class Root {
+    Oct *oct;
 
 public:
-    Side() {
-        quad = new Quad(double3(0.0, 0.0, 0.0), maxLength);
+    Root() {
+        oct = new Oct(double3(0.0, 0.0, 0.0), maxLength);
     }
 
     void update(double3 camPos) {
-		int quadsAdded = 0;
+		int octsAdded = 0;
 
-        quad->update();
-        quad->transform();
+        oct->update();
+        oct->transform();
 
-		quad->addQuads(&quadsAdded, true);
-		quad->addQuads(&quadsAdded, false);
-		quad->update();
+		oct->addOcts(&octsAdded, true);
+		oct->addOcts(&octsAdded, false);
+		oct->update();
 
 		for (int l = minLength; l < maxLength; l *= 2.0) {
-			quad->removeQuads(l);
-			quad->update();
+			oct->removeOcts(l);
+			oct->update();
 		}
     }
 
     void drawClose() {
 		planetShader.setShader(true);
 
-        quad->drawTerrain(true);
+        oct->drawTerrain(true);
     }
 
     void drawFar() {
 		planetShader.setShader(false);
 
-        quad->drawTerrain(false);
+        oct->drawTerrain(false);
     }
 
 	void cleanUp() {
-		delete quad;
+		delete oct;
 	}
 
-	~Side() {
+	~Root() {
 		cleanUp();
     }
 };

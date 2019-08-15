@@ -12,7 +12,6 @@ class ComputeShader {
 	ID3D11Buffer* resultBuffer;
 	ID3D11UnorderedAccessView* outputUAV;
 
-
 public:
 	ComputeShader() {}
 	ComputeShader(const wchar_t fileName[]) {
