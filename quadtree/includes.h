@@ -172,9 +172,7 @@ struct cbPerObject
 {
 	XMMATRIX  WVP;
 	XMMATRIX World;
-};
-
-cbPerObject cbPerObj;
+} cbPerObj;
 
 struct cbPerPlanet
 {
@@ -184,40 +182,29 @@ struct cbPerPlanet
 	XMFLOAT3 Translation;
 	XMMATRIX View;
 	XMMATRIX Proj;
-};
-
-cbPerPlanet cbPerPlanetObj;
+} cbPerPlanetObj;
 
 struct cbPerFrameVS
 {
 	float timeElaps;
 	XMFLOAT3 pad1;
-};
+} constbuffPerFrameVS;
 
 double timeElaps = 0.0;
 
-cbPerFrameVS constbuffPerFrameVS;
-
 struct Light
 {
-	Light()
-	{
-		ZeroMemory(this, sizeof(Light));
-	}
+	Light() { ZeroMemory(this, sizeof(Light)); }
 	XMFLOAT4 ambient;
 	XMFLOAT4 diffuse;
 	XMFLOAT3 dir;
-};
-
-Light light;
+} light;
 
 struct cbPerFramePS
 {
 	Light  light;
 	float pad2;
-};
-
-cbPerFramePS constbuffPerFramePS;
+} constbuffPerFramePS;
 
 struct InstanceData
 {

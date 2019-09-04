@@ -1,28 +1,30 @@
 #include "includes.h"
+#include "vertexObject.h"
+#include "indexObject.h"
 
 #ifndef __SKY_H_INCLUDED__
 #define __SKY_H_INCLUDED__ 
 
-class sky{
+class Sky {
 private:
-	ID3D11Buffer* indexBuffer;
-	ID3D11Buffer* vertBuffer;
+	VertexObject* vertexObj;
+	IndexObject* indexObj;
 
-	int Numvertices;
-	int NumSphereFaces;
+	int nVertices;
+	int nSphereFaces;
 
 	XMMATRIX world;
 
 public:
 	void CreateSphere(int LatLines, int LongLines)
 	{
-		Numvertices = ((LatLines-2) * LongLines) + 2;
-		NumSphereFaces  = ((LatLines-3)*(LongLines)*2) + (LongLines*2);
+		nVertices = ((LatLines-2) * LongLines) + 2;
+		nSphereFaces  = ((LatLines-3)*(LongLines)*2) + (LongLines*2);
 
 		float sphereYaw = 0.0f;
 		float spherePitch = 0.0f;
 
-		std::vector<Vertex> vertices(Numvertices);
+		std::vector<Vertex> vertices(nVertices);
 
 		XMVECTOR currVertPos = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
 
@@ -46,28 +48,12 @@ public:
 			}
 		}
 
-		vertices[Numvertices-1].pos.x =  0.0f;
-		vertices[Numvertices-1].pos.y =  0.0f;
-		vertices[Numvertices-1].pos.z = -1.0f;
+		vertices[nVertices-1].pos.x =  0.0f;
+		vertices[nVertices-1].pos.y =  0.0f;
+		vertices[nVertices-1].pos.z = -1.0f;
 
 
-		D3D11_BUFFER_DESC vertexBufferDesc;
-		ZeroMemory( &vertexBufferDesc, sizeof(vertexBufferDesc) );
-
-		vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-		vertexBufferDesc.ByteWidth = sizeof( Vertex ) * Numvertices;
-		vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-		vertexBufferDesc.CPUAccessFlags = 0;
-		vertexBufferDesc.MiscFlags = 0;
-
-		D3D11_SUBRESOURCE_DATA vertexBufferData; 
-
-		ZeroMemory( &vertexBufferData, sizeof(vertexBufferData) );
-		vertexBufferData.pSysMem = &vertices[0];
-		hr = d3d11Device->CreateBuffer( &vertexBufferDesc, &vertexBufferData, &vertBuffer);
-
-
-		std::vector<DWORD> indices(NumSphereFaces * 3);
+		std::vector<DWORD> indices(nSphereFaces * 3);
 
 		int k = 0;
 		for(DWORD l = 0; l < LongLines-1; ++l)
@@ -111,30 +97,18 @@ public:
 
 		for(DWORD l = 0; l < LongLines-1; ++l)
 		{
-			indices[k] = Numvertices-1;
-			indices[k+1] = (Numvertices-1)-(l+1);
-			indices[k+2] = (Numvertices-1)-(l+2);
+			indices[k] = nVertices-1;
+			indices[k+1] = (nVertices-1)-(l+1);
+			indices[k+2] = (nVertices-1)-(l+2);
 			k += 3;
 		}
 
-		indices[k] = Numvertices-1;
-		indices[k+1] = (Numvertices-1)-LongLines;
-		indices[k+2] = Numvertices-2;
+		indices[k] = nVertices-1;
+		indices[k+1] = (nVertices-1)-LongLines;
+		indices[k+2] = nVertices-2;
 
-		D3D11_BUFFER_DESC indexBufferDesc;
-		ZeroMemory( &indexBufferDesc, sizeof(indexBufferDesc) );
-
-		indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-		indexBufferDesc.ByteWidth = sizeof(DWORD) * NumSphereFaces * 3;
-		indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-		indexBufferDesc.CPUAccessFlags = 0;
-		indexBufferDesc.MiscFlags = 0;
-
-		D3D11_SUBRESOURCE_DATA iinitData;
-
-		iinitData.pSysMem = &indices[0];
-		d3d11Device->CreateBuffer(&indexBufferDesc, &iinitData, &indexBuffer);
-
+		vertexObj = new VertexObject(vertices.data(), sizeof(Vertex), nVertices);
+		indexObj = new IndexObject(indices.data(), nSphereFaces * 3);
 	}
 
 	void updateSphere(){
@@ -157,9 +131,9 @@ public:
 		skymapShader.setShader();
 
 		//Set the spheres index buffer
-		d3d11DevCon->IASetIndexBuffer( indexBuffer, DXGI_FORMAT_R32_UINT, 0);
+		d3d11DevCon->IASetIndexBuffer(indexObj->getBuffer(), DXGI_FORMAT_R32_UINT, 0);
 		//Set the spheres vertex buffer
-		d3d11DevCon->IASetVertexBuffers( 0, 1, &vertBuffer, &stride2, &offset2 );
+		d3d11DevCon->IASetVertexBuffers( 0, 1, vertexObj->getBuffer(), &stride2, &offset2 );
 
 		//Set the WVP matrix and send it to the constant buffer in effect file
 		WVP = world * camView * camProjection[1];
@@ -174,15 +148,14 @@ public:
 		//Set the new depth/stencil and RS states
 		d3d11DevCon->OMSetDepthStencilState(DSLessEqual, 0);
 		d3d11DevCon->RSSetState(RSCullNone);
-		d3d11DevCon->DrawIndexed( NumSphereFaces * 3, 0, 0 );
+		d3d11DevCon->DrawIndexed(nSphereFaces * 3, 0, 0 );
 	}
 
-	void cleanUp(){
-		indexBuffer->Release();
-		vertBuffer->Release();
+	~Sky() {
+		delete vertexObj;
+		delete indexObj;
 	}
-
-}skybox;
+} skybox;
 
 
 #endif

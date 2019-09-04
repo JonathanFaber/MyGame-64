@@ -8,6 +8,8 @@
 #include "includes.h"
 #include "terrain.h"
 #include "transvoxel.h"
+#include "vertexObject.h"
+#include "indexObject.h"
 
 #define N_CHILDREN 8
 
@@ -34,18 +36,13 @@ private:
 	bool draw = true;
 	Oct *child[N_CHILDREN];
 
-    ID3D11Buffer* indexBuffer;
-    ID3D11Buffer* vertBuffer;
-    XMMATRIX groundWorld;
+	VertexObject* vertexObj;
+	IndexObject* indexObj;
+	XMMATRIX groundWorld;
     XMFLOAT3 translation;
 
-    PlanetVertex vertices[(chunkLength)*(chunkLength)*(chunkLength)*12];
-    DWORD indices[chunkLength*chunkLength*chunkLength * 6 * 3];
 	int nVertices = 0;
 	int nIndices = 0;
-
-    D3D11_SUBRESOURCE_DATA indexBufferData;
-    D3D11_SUBRESOURCE_DATA vertexBufferData;
 
 	void setTerrainData();
 	void makeChildren();
@@ -97,24 +94,23 @@ inline TerrainPoint Oct::interpolateVertex(TerrainPoint a, TerrainPoint b, float
 		return a;
 }
 
-inline void Oct::setTerrainData() {
-	TerrainPoint terrainPoints[(chunkLength + 1)][(chunkLength + 1)][(chunkLength + 1)];
+void Oct::setTerrainData() {
+	TerrainPoint terrainPoints[(chunkLength + 3)][(chunkLength + 3)][(chunkLength + 3)];
+	std::vector <PlanetVertex> vertices;
+	std::vector <DWORD> indices;
 
-	for (int y = 0; y < (chunkLength + 1); y++) {
-		for (int z = 0; z < (chunkLength + 1); z++) {
-			for (int x = 0; x < (chunkLength + 1); x++) {
+	for (int y = -1; y < (chunkLength + 2); y++) {
+		for (int z = -1; z < (chunkLength + 2); z++) {
+			for (int x = -1; x < (chunkLength + 2); x++) {
 				double3 temp = double3((x - chunkLength / 2.0) / (chunkLength / 2.0) * length, (y - chunkLength / 2.0) / (chunkLength / 2.0) * length, (z - chunkLength / 2.0) / (chunkLength / 2.0) * length);				
-				terrainPoints[y][z][x] = TerrainPoint(temp + pos);
+				terrainPoints[y+1][z+1][x+1] = TerrainPoint(temp + pos);
 			}
 		}
 	}
 
-	nVertices = 0;
-	nIndices = 0;
-
-	for (int z = 0; z < chunkLength; z++) {
-		for (int y = 0; y < chunkLength; y++) {
-			for (int x = 0; x < chunkLength; x++) {
+	for (int z = 0; z < chunkLength + 2; z++) {
+		for (int y = 0; y < chunkLength + 2; y++) {
+			for (int x = 0; x < chunkLength + 2; x++) {
 				TerrainPoint t[8];
 
 				double3 cubeNormal = double3();
@@ -187,6 +183,7 @@ inline void Oct::setTerrainData() {
 
 						double3 temp = tp.pos - firstCamPos;
 
+						vertices.push_back(PlanetVertex());
 						vertices[nVertices].pos = XMFLOAT3(float(temp.x), float(temp.y), float(temp.z));
 						vertices[nVertices].normal = XMFLOAT3(0.0f, 0.0f, 0.0f);
 
@@ -206,41 +203,17 @@ inline void Oct::setTerrainData() {
 
 					// Indices
 					for (int i = 0; i < triCount * 3; i++) {
-						indices[nIndices++] = cellData.vertexIndex[i] + nVertices - vertCount;
+						indices.push_back(cellData.vertexIndex[i] + nVertices - vertCount);
 					}
 				}
 			}
 		}
 	}
 
-	D3D11_BUFFER_DESC indexBufferDesc;
-	D3D11_BUFFER_DESC vertexBufferDesc;
+	nIndices = indices.size();
 
-	// Vertices
-	ZeroMemory(&vertexBufferData, sizeof(vertexBufferData));
-	ZeroMemory(&vertexBufferDesc, sizeof(vertexBufferDesc));
-
-	vertexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	vertexBufferDesc.ByteWidth = sizeof(PlanetVertex) * nVertices;
-	vertexBufferDesc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-	vertexBufferDesc.CPUAccessFlags = 0;
-	vertexBufferDesc.MiscFlags = 0;
-
-	vertexBufferData.pSysMem = vertices;
-	hr = d3d11Device->CreateBuffer(&vertexBufferDesc, &vertexBufferData, &vertBuffer);
-
-	// Indices
-	ZeroMemory(&indexBufferData, sizeof(indexBufferData));
-	ZeroMemory(&indexBufferDesc, sizeof(indexBufferDesc));
-
-	indexBufferDesc.Usage = D3D11_USAGE_DEFAULT;
-	indexBufferDesc.BindFlags = D3D11_BIND_INDEX_BUFFER;
-	indexBufferDesc.CPUAccessFlags = 0;
-	indexBufferDesc.MiscFlags = 0;
-	indexBufferDesc.ByteWidth = sizeof(DWORD) * nIndices;
-
-	indexBufferData.pSysMem = indices;
-	d3d11Device->CreateBuffer(&indexBufferDesc, &indexBufferData, &indexBuffer);
+	vertexObj = new VertexObject(vertices.data(), sizeof(PlanetVertex), nVertices);
+	indexObj = new IndexObject(indices.data(), nIndices);
 }
 
 inline void Oct::update() {
@@ -335,8 +308,8 @@ inline void Oct::drawTerrain(bool drawClose) {
                 UINT stride = sizeof(PlanetVertex);
                 UINT offset = 0;
 
-                d3d11DevCon->IASetIndexBuffer(indexBuffer, DXGI_FORMAT_R32_UINT, 0);
-                d3d11DevCon->IASetVertexBuffers(0, 1, &vertBuffer, &stride, &offset);
+                d3d11DevCon->IASetIndexBuffer(indexObj->getBuffer(), DXGI_FORMAT_R32_UINT, 0);
+                d3d11DevCon->IASetVertexBuffers(0, 1, vertexObj->getBuffer(), &stride, &offset);
 
                 //Set the WVP matrix and send it to the constant buffer in effect file
                 //WVP = groundWorld * camView * camProjection;
@@ -408,10 +381,9 @@ inline void Oct::makeChildren() {
 }
 
 inline Oct::~Oct() {
-	if (vertBuffer != nullptr)
-		vertBuffer->Release();
-	if (indexBuffer != nullptr)
-		indexBuffer->Release();
+	delete vertexObj;
+	delete indexObj;
+
     for (int i = 0; i < N_CHILDREN; i++) {
 		if (child[i] != nullptr) {
 			delete child[i];

@@ -96,7 +96,7 @@ bool InitializeWindow(HINSTANCE hInstance,
 	hwnd = CreateWindowEx(
 		NULL,
 		WndClassName,
-		L"Quad tree",
+		L"Oct Tree",
 		WS_OVERLAPPEDWINDOW,
 		CW_USEDEFAULT, CW_USEDEFAULT,
 		width, height,
@@ -265,13 +265,9 @@ void CleanUp()
 	DirectInput->Release();
     
 	octTree->cleanUp();
-	skybox.cleanUp();
 	//grass.cleanUp();
 	testModel.cleanUp();
 	//sprucetree.cleanUp();
-
-	menuButton_resume.cleanUp();
-	menuButton_quitWorld.cleanUp();
 
 	cleanUpText();
 

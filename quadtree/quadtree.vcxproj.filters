@@ -63,6 +63,15 @@
     <ClInclude Include="transvoxel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="vertexObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="indexObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="constantBufferObject.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
