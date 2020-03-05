@@ -1,7 +1,7 @@
 #pragma once
 
-#include "includes.h"
-#include "simplexnoise.h"
+#include "globals.h"
+
 #define TRUE    1
 #define FALSE   0
 

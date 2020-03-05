@@ -1,6 +1,4 @@
 #include "includes.h"
-#include "vertexObject.h"
-#include "indexObject.h"
 
 #ifndef __SPRITES_H_INCLUDED__
 #define __SPRITES_H_INCLUDED__ 

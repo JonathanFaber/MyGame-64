@@ -1,4 +1,4 @@
-#include "includes.h"
+#include "globals.h"
 
 #ifndef __SHADER_H_INCLUDED__
 #define __SHADER_H_INCLUDED__

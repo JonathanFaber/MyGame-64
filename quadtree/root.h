@@ -6,7 +6,6 @@
 #define MYGAME_64_SIDE_H
 
 #include "oct.h"
-#include "shaders.h"
 
 class Root {
     Oct *oct;

@@ -1,6 +1,4 @@
 #include "includes.h"
-#include "vertexObject.h"
-#include "indexObject.h"
 
 #ifndef __SKY_H_INCLUDED__
 #define __SKY_H_INCLUDED__ 

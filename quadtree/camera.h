@@ -53,7 +53,7 @@ void DetectMouseInput()
 				camYaw += mouseLastState.lX * 0.002;
 				camPitch += mouseCurrState.lY * 0.002;
 
-				speed *= pow(2, mouseCurrState.lZ * 0.002);
+				speed *= pow(2, mouseCurrState.lZ * 2);
 
 				//if (maxSpeed > 10.0)
 				//	maxSpeed = (vLength(camPos) - 4194304.0)/4;
@@ -209,6 +209,16 @@ void DetectKeyboardInput(double time)
 			}
 		}
 
+		if (keyboardState[DIK_E] & 0x80)
+		{
+			speed *= 1.01;
+		}
+
+		if (keyboardState[DIK_Q] & 0x80)
+		{
+			speed /= 1.01;
+		}
+
 		if (crouching == true) {
 			camHeight = 1.0;
 			maxspeedTime = speedTime / 8;
@@ -296,7 +306,6 @@ void DetectKeyboardInput(double time)
 void DetectInput(double time)
 {
 	DetectMouseInput();
-
 	DetectKeyboardInput(time);
 }
 

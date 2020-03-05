@@ -6,12 +6,9 @@
 #define MYGAME_64_OCTTREE_H
 
 #include "includes.h"
-#include "terrain.h"
-#include "transvoxel.h"
-#include "vertexObject.h"
-#include "indexObject.h"
 
 #define N_CHILDREN 8
+const double THRESHOLD = 1.0;
 
 class Oct {
 public:
@@ -46,7 +43,7 @@ private:
 
 	void setTerrainData();
 	void makeChildren();
-	TerrainPoint interpolateVertex(TerrainPoint a, TerrainPoint b, float threshold);
+	TerrainPoint interpolateVertex(TerrainPoint a, TerrainPoint b);
 };
 
 inline Oct::Oct(double3 pos, double length) {
@@ -62,7 +59,7 @@ inline Oct::Oct(double3 pos, double length) {
 	setTerrainData();
 }
 
-inline TerrainPoint Oct::interpolateVertex(TerrainPoint a, TerrainPoint b, float threshold)
+inline TerrainPoint Oct::interpolateVertex(TerrainPoint a, TerrainPoint b)
 {
 	bool flip = false;
 
@@ -89,7 +86,7 @@ inline TerrainPoint Oct::interpolateVertex(TerrainPoint a, TerrainPoint b, float
 	}
 
 	if (abs(a.noiseHeight - b.noiseHeight) > 0.00001)
-		return TerrainPoint(a.pos + (b.pos - a.pos) / (b.noiseHeight - a.noiseHeight) * (threshold - a.noiseHeight), threshold);
+		return TerrainPoint(a.pos + (b.pos - a.pos) / (b.noiseHeight - a.noiseHeight) * (THRESHOLD - a.noiseHeight), THRESHOLD);
 	else
 		return a;
 }
@@ -142,7 +139,7 @@ void Oct::setTerrainData() {
 					cubeNormal = cubeNormal + cubeNormals[i] * t[i].noiseHeight;
 
 					belows[i] = false;
-					if (t[i].noiseHeight < 0.0) {
+					if (t[i].noiseHeight <= THRESHOLD) {
 						below = true;
 						belows[i] = true;
 					}
@@ -155,14 +152,14 @@ void Oct::setTerrainData() {
 				if (above && below) {
 					BYTE cubeindex = 0;
 					BYTE bit = 1;
-					if (t[0].noiseHeight <= 0.0) cubeindex |= 1;
-					if (t[1].noiseHeight <= 0.0) cubeindex |= 2;
-					if (t[2].noiseHeight <= 0.0) cubeindex |= 4;
-					if (t[3].noiseHeight <= 0.0) cubeindex |= 8;
-					if (t[4].noiseHeight <= 0.0) cubeindex |= 16;
-					if (t[5].noiseHeight <= 0.0) cubeindex |= 32;
-					if (t[6].noiseHeight <= 0.0) cubeindex |= 64;
-					if (t[7].noiseHeight <= 0.0) cubeindex |= 128;
+					if (t[0].noiseHeight <= THRESHOLD) cubeindex |= 1;
+					if (t[1].noiseHeight <= THRESHOLD) cubeindex |= 2;
+					if (t[2].noiseHeight <= THRESHOLD) cubeindex |= 4;
+					if (t[3].noiseHeight <= THRESHOLD) cubeindex |= 8;
+					if (t[4].noiseHeight <= THRESHOLD) cubeindex |= 16;
+					if (t[5].noiseHeight <= THRESHOLD) cubeindex |= 32;
+					if (t[6].noiseHeight <= THRESHOLD) cubeindex |= 64;
+					if (t[7].noiseHeight <= THRESHOLD) cubeindex |= 128;
 
 					RegularCellData cellData = regularCellData[regularCellClass[cubeindex]];
 
@@ -179,7 +176,7 @@ void Oct::setTerrainData() {
 						USHORT v0 = (edgeCode >> 4) & 0x0F;
 						USHORT v1 = edgeCode & 0x0F;
 
-						tp = interpolateVertex(t[v0], t[v1], 0.0);
+						tp = interpolateVertex(t[v0], t[v1]);
 
 						double3 temp = tp.pos - firstCamPos;
 

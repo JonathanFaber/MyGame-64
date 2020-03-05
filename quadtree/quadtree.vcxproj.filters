@@ -13,7 +13,7 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Shaders">
+    <Filter Include="Source Files\Shaders">
       <UniqueIdentifier>{5d6587d4-caa6-4fde-ad8c-b662701dd5fb}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -72,6 +72,12 @@
     <ClInclude Include="constantBufferObject.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="libraries.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="globals.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -89,33 +95,33 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="noise3d.hlsli">
-      <Filter>Shaders</Filter>
+      <Filter>Source Files\Shaders</Filter>
     </None>
     <None Include="noise4d.hlsli">
-      <Filter>Shaders</Filter>
+      <Filter>Source Files\Shaders</Filter>
     </None>
     <None Include="noise3dd.hlsli">
-      <Filter>Shaders</Filter>
+      <Filter>Source Files\Shaders</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
     <FxCompile Include="model.hlsl">
-      <Filter>Shaders</Filter>
+      <Filter>Source Files\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="planet.hlsl">
-      <Filter>Shaders</Filter>
+      <Filter>Source Files\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="skymap.hlsl">
-      <Filter>Shaders</Filter>
+      <Filter>Source Files\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="sprite.hlsl">
-      <Filter>Shaders</Filter>
+      <Filter>Source Files\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="default.hlsl">
-      <Filter>Shaders</Filter>
+      <Filter>Source Files\Shaders</Filter>
     </FxCompile>
     <FxCompile Include="compute.hlsl">
-      <Filter>Shaders</Filter>
+      <Filter>Source Files\Shaders</Filter>
     </FxCompile>
   </ItemGroup>
 </Project>

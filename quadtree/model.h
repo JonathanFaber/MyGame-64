@@ -1,10 +1,6 @@
 #pragma once
 
 #include "includes.h"
-#include "Importer.hpp"      // C++ importer interface
-#include "scene.h"           // Output data structure
-#include "postprocess.h"     // Post processing flags
-#include "vector3.h"
 
 
 class Mesh {

@@ -1,8 +1,6 @@
 #pragma once
 
-#include "includes.h"
-#include "simplexnoise.h"
-#include "noiseFunctions.h"
+#include "globals.h"
 
 class TerrainPoint {
 public:
@@ -11,24 +9,26 @@ public:
 
 	TerrainPoint() {};
 	TerrainPoint(double3 pos) {
-		double amplitude = 1024.0;
+		double amplitude = 16384.0;
 		double maxAmplitude = 0.0;
-		double freq = 1.0 / 256.0;
+		double freq = 1.0 / amplitude;
 		double lacunarity = 2.0;
 		double persistence = 0.5;
 
 		this->pos = pos;
 		noiseHeight = 0.0;
 
-		for (int k = 0; k < 10; k++) {
-			noiseHeight += raw_noise_3d(pos.x * freq, pos.y * freq, pos.z * freq) * amplitude;
+		for (int k = 0; k < 22; k++) {
+			double t = abs(raw_noise_3d(pos.x * freq + 100000000.0, pos.y * freq + 100000000.0, pos.z * freq + 100000000.0));
+			double noise = (raw_noise_3d(pos.x * freq, pos.y * freq, pos.z * freq) + 1.0);
+			noiseHeight += noise * amplitude * t; // * t
 			maxAmplitude += amplitude;
 			amplitude *= persistence;
 			freq *= lacunarity;
 		}
 
-		// noiseHeight /= maxAmplitude;
-		noiseHeight += abs(vLength(pos) - maxLength) * (vLength(pos) - maxLength);
+		noiseHeight /= maxAmplitude;
+		noiseHeight += abs(vLength(pos) - maxLength) * (vLength(pos) - maxLength) / 256000000.0;
 		// noiseHeight -= 0.15;
 	};
 
