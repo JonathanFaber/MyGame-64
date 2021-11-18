@@ -11,6 +11,8 @@
 #include <d3d11.h>
 #include <d3dx11.h>
 #include <DirectXMath.h>
+#include <stdlib.h>
+#include <thread>
 #include <sstream>
 #include <fstream>
 #include <istream>

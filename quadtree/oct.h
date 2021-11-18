@@ -42,6 +42,7 @@ private:
 	int nIndices = 0;
 
 	void setTerrainData();
+	void makeChild(int i);
 	void makeChildren();
 	TerrainPoint interpolateVertex(TerrainPoint a, TerrainPoint b);
 };
@@ -351,30 +352,46 @@ inline void Oct::drawTerrain(bool drawClose) {
     }
 }
 
-inline void Oct::makeChildren() {
-    for (int i = 0; i < N_CHILDREN; i++) {
-		double3 childPos;
+void Oct::makeChild(int i) {
+	double3 childPos;
 
-        if (i == 0) {
-            childPos = double3(pos.x - 0.5*length, pos.y - 0.5*length, pos.z - 0.5*length);
-        } else if (i == 1) {
-            childPos = double3(pos.x + 0.5*length, pos.y - 0.5*length, pos.z - 0.5*length);
-        } else if (i == 2) {
-            childPos = double3(pos.x + 0.5*length, pos.y - 0.5*length, pos.z + 0.5*length);
-        } else if (i == 3) {
-            childPos = double3(pos.x - 0.5*length, pos.y - 0.5*length, pos.z + 0.5*length);
-        } else if (i == 4) {
-			childPos = double3(pos.x - 0.5*length, pos.y + 0.5*length, pos.z - 0.5*length);
-		} else if (i == 5) {
-			childPos = double3(pos.x + 0.5*length, pos.y + 0.5*length, pos.z - 0.5*length);
-		} else if (i == 6) {
-			childPos = double3(pos.x + 0.5*length, pos.y + 0.5*length, pos.z + 0.5*length);
-		} else if (i == 7) {
-			childPos = double3(pos.x - 0.5*length, pos.y + 0.5*length, pos.z + 0.5*length);
-		}
-        
-        child[i] = new Oct(childPos, length / 2.0);
+	if (i == 0) {
+		childPos = double3(pos.x - 0.5*length, pos.y - 0.5*length, pos.z - 0.5*length);
+	}
+	else if (i == 1) {
+		childPos = double3(pos.x + 0.5*length, pos.y - 0.5*length, pos.z - 0.5*length);
+	}
+	else if (i == 2) {
+		childPos = double3(pos.x + 0.5*length, pos.y - 0.5*length, pos.z + 0.5*length);
+	}
+	else if (i == 3) {
+		childPos = double3(pos.x - 0.5*length, pos.y - 0.5*length, pos.z + 0.5*length);
+	}
+	else if (i == 4) {
+		childPos = double3(pos.x - 0.5*length, pos.y + 0.5*length, pos.z - 0.5*length);
+	}
+	else if (i == 5) {
+		childPos = double3(pos.x + 0.5*length, pos.y + 0.5*length, pos.z - 0.5*length);
+	}
+	else if (i == 6) {
+		childPos = double3(pos.x + 0.5*length, pos.y + 0.5*length, pos.z + 0.5*length);
+	}
+	else if (i == 7) {
+		childPos = double3(pos.x - 0.5*length, pos.y + 0.5*length, pos.z + 0.5*length);
+	}
+
+	child[i] = new Oct(childPos, length / 2.0);
+}
+
+inline void Oct::makeChildren() {
+	std::thread thr[N_CHILDREN];
+
+    for (int i = 0; i < N_CHILDREN; i++) {
+		thr[i] = std::thread(&Oct::makeChild, this, i);
     }
+
+	for (int i = 0; i < N_CHILDREN; i++)
+		thr[i].join();
 }
 
 inline Oct::~Oct() {
